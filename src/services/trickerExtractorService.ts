@@ -1,42 +1,10 @@
 import Fuse from "fuse.js";
-import { Stock } from "@/types";
-
-/**
- * Interface representing stock information used internally by the parser
- * We ensure exchangeShortName is required for internal use
- */
-interface StockInfo {
-  symbol: string;
-  name: string;
-  exchangeShortName: string;
-}
-
-/**
- * Interface for search match results
- */
-interface MatchResult {
-  stock: StockInfo;
-  confidence: number;
-}
-
-/**
- * Interface for cached index type
- */
-interface CachedIndex {
-  expiresAt: number; // Timestamp when cache expires
-  sourceHash: string; // Hash of source data to detect changes
-  index: unknown; // Fuse index type
-}
-
-/**
- * Type for supported locations
- */
-type SupportedLocation = 'global' | 'US' | 'HK' | 'CN';
+import { Stock, StockInfo, MatchResult, CachedIndex, SupportedLocation } from "@/types";
 
 /**
  * Interface for location-specific indexes
  */
-interface LocationBasedIndexes {
+export interface LocationBasedIndexes {
   [location: string]: {
     index: Fuse<StockInfo>;
     stockList: StockInfo[];
@@ -48,10 +16,13 @@ interface LocationBasedIndexes {
 /**
  * Interface for parser configuration
  */
-interface ParserConfig {
+export interface ParserConfig {
   cacheTTL?: number; // Time to live in milliseconds
   useCache?: boolean; // Whether to use caching
   buildLocationIndexes?: boolean; // Whether to build location-specific indexes
+  minMatchCharLength?: number; // Minimum length required for a match
+  threshold?: number; // Fuzzy search threshold
+  defaultMaxResults?: number; // Default maximum results to return
 }
 
 /**
@@ -71,14 +42,29 @@ interface ParserConfig {
  * 3. Query context (mentions of "Hong Kong", "US market", etc.) affects selection
  * 4. In global context, more liquid markets (NYSE, NASDAQ, HKSE, LSE) are prioritized
  */
-// Keep a singleton instance of the parser with its cached index
-let parserInstance: StockTickerParser | null = null;
-let currentStockListHash: string = "";
+
+// Singleton instance management
+let _parserInstance: StockTickerParser | null = null;
+let _currentStockListHash: string = "";
+
+export const DEFAULT_CONFIG: ParserConfig = {
+  cacheTTL: 3600000, // 1 hour
+  useCache: true,
+  buildLocationIndexes: true,
+  minMatchCharLength: 2,
+  threshold: 0.35,
+  defaultMaxResults: 5
+};
 
 /**
  * Generates a simple hash for the data
+ * @throws {Error} If data is null or undefined
  */
 function generateSourceHash(data: StockInfo[]): string {
+  if (!data) {
+    throw new Error("Cannot generate hash for null or undefined data");
+  }
+  
   return JSON.stringify(data)
     .split("")
     .reduce((hash, char) => {
@@ -97,47 +83,80 @@ function generateSourceHash(data: StockInfo[]): string {
  * @returns Array of ticker symbols
  */
 export function findStockTickers(
-  text: string,
+  text: string | null | undefined,
   stockList: Stock[],
-  location: string = "global",
+  location?: SupportedLocation,
   confidenceThreshold: number = 0.3,
   maxResults: number = 5
 ): string[] {
-  console.debug(`[findStockTickers] START - query: "${text}", location: ${location}, maxResults: ${maxResults}`);
+  // Input validation
+  if (!text) {
+    console.debug("[findStockTickers] Empty or null input text, returning empty array");
+    return [];
+  }
   
+  if (!Array.isArray(stockList) || stockList.length === 0) {
+    console.debug("[findStockTickers] Empty or invalid stock list");
+    return [];
+  }
+  
+  console.debug(`[findStockTickers] START - query: "${text}", location: ${location || 'global'}, maxResults: ${maxResults}`);
+
   // Convert Stock[] to StockInfo[] with guaranteed exchangeShortName
-  const validStocks: StockInfo[] = stockList
+  const validStocks = stockList
     .filter((stock): stock is Stock & { exchangeShortName: string } => 
-      typeof stock.exchangeShortName === 'string')
-    .map(stock => ({
+      typeof stock.symbol === 'string' &&
+      typeof stock.name === 'string' &&
+      typeof stock.exchangeShortName === 'string' &&
+      stock.exchangeShortName.length > 0
+    )
+    .map((stock): StockInfo => ({
       symbol: stock.symbol,
       name: stock.name,
-      exchangeShortName: stock.exchangeShortName
+      exchangeShortName: stock.exchangeShortName // Now safe because of type predicate
     }));
-  
+    
+  if (validStocks.length === 0) {
+    console.debug("[findStockTickers] No valid stocks after filtering");
+    return [];
+  }
+    
   console.debug(`[findStockTickers] Filtered ${stockList.length} stocks → ${validStocks.length} valid stocks`);
   
   // Generate hash of the current stock list
   const newStockListHash = generateSourceHash(validStocks);
   
-  // Create parser instance if it doesn't exist or if the stock list has changed
-  if (!parserInstance || newStockListHash !== currentStockListHash) {
-    console.debug(`[findStockTickers] Creating new StockTickerParser instance (hash changed: ${currentStockListHash} → ${newStockListHash})`);
-    parserInstance = new StockTickerParser(validStocks);
-    currentStockListHash = newStockListHash;
+  // Create or update parser instance
+  if (!_parserInstance || newStockListHash !== _currentStockListHash) {
+    console.debug(`[findStockTickers] Creating new StockTickerParser instance (hash changed: ${_currentStockListHash} → ${newStockListHash})`);
+    try {
+      _parserInstance = new StockTickerParser(validStocks, DEFAULT_CONFIG);
+      _currentStockListHash = newStockListHash;
+    } catch (error) {
+      console.error("[findStockTickers] Failed to create parser instance:", error);
+      return [];
+    }
   } else {
-    console.debug(`[findStockTickers] Reusing existing StockTickerParser instance (hash: ${currentStockListHash})`);
+    console.debug(`[findStockTickers] Reusing existing StockTickerParser instance (hash: ${_currentStockListHash})`);
   }
   
-  const results = parserInstance.findStockTickers(
-    text,
-    location,
-    confidenceThreshold,
-    maxResults
-  );
+  if (!_parserInstance) throw new Error("Failed to initialize parser instance");
   
-  console.debug(`[findStockTickers] END - Found ${results.length} tickers: ${results.join(', ')}`);
-  return results;
+  let result: string[] = [];
+  try {
+    result = _parserInstance.findStockTickers(
+      text.trim(),
+      location || 'global',
+      Math.max(0, Math.min(1, confidenceThreshold)), // Clamp between 0 and 1
+      Math.max(1, maxResults) // Ensure at least 1 result
+    );
+  } catch (error) {
+    console.error("[findStockTickers] Error during ticker search:", error);
+    return [];
+  }
+
+  console.debug(`[findStockTickers] END - Found ${result.length} tickers: ${result.join(', ')}`);
+  return result;
 }
 
 export class StockTickerParser {
@@ -188,9 +207,7 @@ export class StockTickerParser {
 
     // Build location-specific indexes if enabled
     if (this.config.buildLocationIndexes) {
-      // Only build indexes for our supported locations
-      const supportedLocations: SupportedLocation[] = ['US', 'HK', 'CN'];
-      this.buildLocationBasedIndexes(supportedLocations);
+      this.buildLocationBasedIndexes(['US', 'HK', 'CN']);
     }
   }
   
@@ -448,7 +465,7 @@ export class StockTickerParser {
    * @param location Market location to use for search
    * @returns Array of matching stocks with confidence scores
    */
-  private parseQuery(input: string, maxResults: number = 5, location: SupportedLocation = 'global'): MatchResult[] {
+  private parseQuery(input: string, maxResults: number = 5, location: string = 'global'): MatchResult[] {
     console.debug(`[parseQuery] START processing query: "${input}", location: ${location}, maxResults: ${maxResults}`);
     const candidates = this.extractCandidates(input);
     console.debug(`[parseQuery] Got ${candidates.length} candidates for matching`);
@@ -462,11 +479,19 @@ export class StockTickerParser {
     for (const candidate of candidates) {
       const exactMatch = this.symbolMap[candidate];
       if (exactMatch && !seenSymbols.has(exactMatch.symbol)) {
-        // For non-global locations, only include stocks from the target exchanges
-        if (location !== 'global') {
+        // We prioritize explicit ticker matches - if a ticker in the candidate list exactly matches
+        // a stock symbol, we include it regardless of exchange/location
+        // This is particularly important for cases where the user explicitly mentions a ticker
+        // For example: query "BABA" should return BABA even if the location is set to "HK"
+        
+        // Check if the candidate is an exact match for the ticker symbol
+        const isExactTickerMatch = candidate.toUpperCase() === exactMatch.symbol;
+        
+        // Only apply exchange filtering if this isn't an exact ticker match
+        if (!isExactTickerMatch && location !== 'global') {
           const targetExchanges = this.exchangeMap[location] || [];
           if (targetExchanges.length > 0 && !targetExchanges.includes(exactMatch.exchangeShortName)) {
-            console.debug(`[parseQuery] Skipping exact match ${exactMatch.symbol} - not in ${location} exchanges`);
+            console.debug(`[parseQuery] Skipping exchange match ${exactMatch.symbol} - not in ${location} exchanges`);
             continue;
           }
         }

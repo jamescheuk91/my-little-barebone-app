@@ -5,7 +5,6 @@ export interface ChatRequest {
   targetLanguage: Language;
 }
 
-
 export interface TranslationRequest {
   text: string;
   targetLanguage: Language;
@@ -40,4 +39,40 @@ export interface ParsedResult {
   stocks: Stock[];
   query: string;
   originalQuery?: string;
+}
+
+/**
+ * Supported market locations for stock searches
+ * global: Search across all markets
+ * US: United States markets (NYSE, NASDAQ, etc.)
+ * HK: Hong Kong market (HKSE)
+ * CN: Chinese markets (Shanghai, Shenzhen)
+ */
+export type SupportedLocation = 'global' | 'US' | 'HK' | 'CN';
+
+/**
+ * Interface representing stock information used internally by the parser
+ * Ensures exchangeShortName is required for internal use
+ */
+export interface StockInfo {
+  symbol: string;
+  name: string;
+  exchangeShortName: string;
+}
+
+/**
+ * Interface for search match results with confidence scoring
+ */
+export interface MatchResult {
+  stock: StockInfo;
+  confidence: number;
+}
+
+/**
+ * Interface for cached index data with expiration and validation
+ */
+export interface CachedIndex {
+  expiresAt: number;
+  sourceHash: string;
+  index: unknown;
 }

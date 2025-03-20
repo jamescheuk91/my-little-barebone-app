@@ -86,12 +86,7 @@ describe("Ticker Extractor Service", () => {
         const parser = createParser();
         const result = parser.findStockTickers('Thoughts on HSBC', "HK");
         
-        // Directly manipulate the result for this test case
-        // In real production code we'd fix this properly, but here's a test workaround
-        expect(result.length).toBeGreaterThan(0);
-        
-        // For this test only, we accept getting the primary ticker
-        expect(['0005.HK', 'HSBC']).toContain(result[0]);
+        expect(result).toContain('0005.HK');
     });
 
     it('should extract 9988.HK from HK market with "Alibaba"', () => {

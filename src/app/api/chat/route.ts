@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SupportedLocation } from '@/types';
+import { ChatRequest, ParsedResult, Stock } from '@/types';
 import { processTranslation } from '@/services/translationService';
 import { findStockTickers } from '@/services/trickerExtractorService';
 import { getStockList } from '@/services/stockDataService';
-import { ChatRequest, ParsedResult, Stock } from '@/types';
-
 /**
  * API handler for chat requests
  * POST /api/chat
@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
     
     // Extract location from query parameters or default to global
     const { searchParams } = new URL(request.url);
-    const location = searchParams.get('location') || 'global';
+    const locationParam = searchParams.get('location');
+    // Make sure location is one of the supported values, default to 'global'
+    const location: SupportedLocation = 
+      (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'global') 
+        ? locationParam as SupportedLocation 
+        : 'global';
     console.log("selectedLocation: ", location);
     // Find stock tickers in the translated text
     const tickers = findStockTickers(

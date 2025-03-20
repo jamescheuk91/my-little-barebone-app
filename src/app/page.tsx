@@ -99,9 +99,6 @@ export default function Home() {
                   <option value="US">US</option>
                   <option value="HK">Hong Kong</option>
                   <option value="CN">China</option>
-                  <option value="UK">UK</option>
-                  <option value="JP">Japan</option>
-                  <option value="EU">Europe</option>
                 </select>
               </div>
             </div>
