@@ -1,20 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import getConfig from 'next/config';
+import { Stock, StockData as CachedStockData } from '@/types';
 
 // Get server runtime config safely (handles test environment)
 const config = getConfig() || { serverRuntimeConfig: {} };
 const { serverRuntimeConfig = {} } = config;
-
-// Define interface for stock data
-export interface StockData {
-  symbol: string;
-  name: string;
-  price: number;
-  exchange: string;
-  exchangeShortName: string;
-  type: string;
-}
 
 // Cache configuration - use /tmp for serverless environments
 const CACHE_DIR = process.env.VERCEL 
@@ -33,7 +24,7 @@ if (!API_KEY) {
 /**
  * Fetches the list of stocks from Financial Modeling Prep API
  */
-async function fetchStockList(): Promise<StockData[]> {
+async function fetchStockList(): Promise<Stock[]> {
   try {
     const response = await fetch(
       `${FMP_LIST_STOCK_API_ENDPOINT}?apikey=${API_KEY}`
@@ -44,7 +35,7 @@ async function fetchStockList(): Promise<StockData[]> {
     }
     
     const data = await response.json();
-    return data.filter((stock: StockData) => stock.type === 'stock');
+    return data.filter((stock: Stock) => stock.type === 'stock');
   } catch (error) {
     console.error('Error fetching stock list:', error);
     throw new Error(`Failed to fetch stock list: ${error instanceof Error ? error.message : String(error)}`);
@@ -63,10 +54,10 @@ function ensureCacheDirectory() {
 /**
  * Saves stock data to the cache file
  */
-export async function cacheStockData(data: StockData[]): Promise<void> {
+export async function cacheStockData(data: Stock[]): Promise<void> {
   ensureCacheDirectory();
   
-  const cacheData = {
+  const cacheData: CachedStockData = {
     timestamp: Date.now(),
     data
   };
@@ -98,10 +89,10 @@ function isCacheValid(): boolean {
 /**
  * Gets stock data from cache
  */
-function getStockDataFromCache(): StockData[] {
+function getStockDataFromCache(): Stock[] {
   try {
     const cacheContent = fs.readFileSync(CACHE_FILE, 'utf-8');
-    const cache = JSON.parse(cacheContent);
+    const cache = JSON.parse(cacheContent) as CachedStockData;
     return cache.data;
   } catch (error) {
     console.error('Error reading from cache:', error);
@@ -112,7 +103,7 @@ function getStockDataFromCache(): StockData[] {
 /**
  * Gets stock list, either from cache if valid or from API
  */
-export async function getStockList(): Promise<StockData[]> {
+export async function getStockList(): Promise<Stock[]> {
   if (isCacheValid()) {
     return getStockDataFromCache();
   }

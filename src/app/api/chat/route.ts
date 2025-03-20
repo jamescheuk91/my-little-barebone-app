@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processTranslation } from '@/services/translationService';
+import { findStockTickers } from '@/services/trickerExtractorService';
 import { getStockList } from '@/services/stockDataService';
-import { ChatRequest } from '@/types';
+import { ChatRequest, ParsedResult } from '@/types';
 
 /**
  * API handler for chat requests
@@ -20,26 +21,52 @@ export async function POST(request: NextRequest) {
     }
     
     // Create chat request with fixed target language "en"
-    const ChatRequest: ChatRequest = {
+    const chatRequest: ChatRequest = {
       text: body.text,
       targetLanguage: 'en' // Always translate to English
     };
     
     // Process the translation
-    const result = await processTranslation(ChatRequest);
-    // const list = await getStockList()
-    // console.log(list.length)
+    const translationResult = await processTranslation(chatRequest);
+    
+    // Get stock list data
+    const stockList = await getStockList();
+    
+    // Extract location from query parameters or default to global
+    const { searchParams } = new URL(request.url);
+    const location = searchParams.get('location') || 'global';
+    console.log("selectedLocation: ", location);
+    // Find stock tickers in the translated text
+    const tickers = findStockTickers(
+      translationResult.translatedText,
+      stockList,
+      location,
+      0.3,  // Default confidence threshold
+      5     // Default max results
+    );
+    
+    // Map tickers to full stock objects
+    const stocks = tickers
+      .map(ticker => stockList.find(stock => stock.symbol === ticker))
+      .filter(Boolean);
+    
+    // Create response with proper format
+    const result: ParsedResult = {
+      stocks,
+      query: translationResult.translatedText,
+      originalQuery: translationResult.translatedText !== translationResult.originalText 
+        ? translationResult.originalText 
+        : undefined
+    };
 
-
-
-    // Return the translation result
+    // Return the result
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Translation API error:', error);
+    console.error('chat API error:', error);
     
     return NextResponse.json(
       { 
-        error: 'Failed to translate text',
+        error: 'Failed to chat',
         message: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }

@@ -1,8 +1,10 @@
 import { Console } from "console";
 import Fuse from "fuse.js";
+import { Stock } from "@/types";
 
 /**
- * Interface representing stock information
+ * Interface representing stock information used internally by the parser
+ * We ensure exchangeShortName is required for internal use
  */
 interface StockInfo {
   symbol: string;
@@ -52,6 +54,41 @@ interface ParserConfig {
  * 3. Query context (mentions of "Hong Kong", "US market", etc.) affects selection
  * 4. In global context, more liquid markets (NYSE, NASDAQ, HKSE, LSE) are prioritized
  */
+/**
+ * Wrapper function to extract stock tickers from text
+ * @param text The text to extract tickers from
+ * @param stockList List of stocks to search
+ * @param location Market location (US, HK, CN, etc.)
+ * @param confidenceThreshold Minimum confidence for matches
+ * @param maxResults Maximum results to return
+ * @returns Array of ticker symbols
+ */
+export function findStockTickers(
+  text: string,
+  stockList: Stock[],
+  location: string = "global",
+  confidenceThreshold: number = 0.3,
+  maxResults: number = 5
+): string[] {
+  // Convert Stock[] to StockInfo[] with guaranteed exchangeShortName
+  const validStocks: StockInfo[] = stockList
+    .filter((stock): stock is Stock & { exchangeShortName: string } => 
+      typeof stock.exchangeShortName === 'string')
+    .map(stock => ({
+      symbol: stock.symbol,
+      name: stock.name,
+      exchangeShortName: stock.exchangeShortName
+    }));
+  
+  const parser = new StockTickerParser(validStocks);
+  return parser.findStockTickers(
+    text,
+    location,
+    confidenceThreshold,
+    maxResults
+  );
+}
+
 export class StockTickerParser {
   private fuse: Fuse<StockInfo>;
   private stockList: StockInfo[];
@@ -414,20 +451,20 @@ export class StockTickerParser {
     
     // Handle cross-listed stocks like Alibaba
     // Group results by company name to identify cross-listings
-    const companiesMap = new Map<string, MatchResult[]>();
+    const crossListingsMap = new Map<string, MatchResult[]>();
     
     results.forEach(result => {
       const name = result.stock.name.toLowerCase();
-      if (!companiesMap.has(name)) {
-        companiesMap.set(name, []);
+      if (!crossListingsMap.has(name)) {
+        crossListingsMap.set(name, []);
       }
-      companiesMap.get(name)?.push(result);
+      crossListingsMap.get(name)?.push(result);
     });
     
     // Identify cross-listed companies and prioritize the right exchange
     let preferredResults: MatchResult[] = [];
     
-    companiesMap.forEach((crossListings, companyName) => {
+    crossListingsMap.forEach((crossListings, companyName) => {
       if (crossListings.length <= 1) {
         // Not cross-listed, just add all
         preferredResults.push(...crossListings);
@@ -658,14 +695,117 @@ export class StockTickerParser {
         
         // Then by confidence score
         return b.confidence - a.confidence;
-      })
-      // Take the requested number of results
-      .slice(0, maxResults)
-      // Extract just the symbols
-      .map(result => result.stock.symbol);
+      });
     
-    console.debug(`Found ${filteredResults.length} matches for location ${location}`);
+    // Group stocks by company name
+    const companiesMap = new Map<string, MatchResult[]>();
     
-    return filteredResults;
+    // Group all results by company name
+    filteredResults.forEach(result => {
+      const companyIdentifier = result.stock.name.toLowerCase();
+      if (!companiesMap.has(companyIdentifier)) {
+        companiesMap.set(companyIdentifier, []);
+      }
+      companiesMap.get(companyIdentifier)?.push(result);
+    });
+    
+    // Process each company to select the most appropriate ticker
+    const deduplicatedResults: MatchResult[] = [];
+    
+    companiesMap.forEach((matches, companyName) => {
+      if (matches.length === 1) {
+        // Only one result for this company, add it
+        deduplicatedResults.push(matches[0]);
+        return;
+      }
+      
+      // For multiple matches of the same company, determine best option
+      
+      // First, check for exact ticker mentions in the query
+      const exactMatches = matches.filter(result => 
+        input.toUpperCase().includes(result.stock.symbol)
+      );
+      
+      if (exactMatches.length > 0) {
+        // If ticker is explicitly mentioned, use that (highest confidence first)
+        deduplicatedResults.push(
+          exactMatches.sort((a, b) => b.confidence - a.confidence)[0]
+        );
+        return;
+      }
+      
+      // Next, check for location-based preference
+      if (location !== "global" && targetExchanges.length > 0) {
+        const locationMatches = matches.filter(result => 
+          targetExchanges.includes(result.stock.exchangeShortName)
+        );
+        
+        if (locationMatches.length > 0) {
+          // If any match the requested location, use the highest confidence one
+          deduplicatedResults.push(
+            locationMatches.sort((a, b) => b.confidence - a.confidence)[0]
+          );
+          return;
+        }
+      }
+      
+      // Check for market hints in the query
+      if (hasHongKongHint) {
+        const hkMatches = matches.filter(result => 
+          result.stock.exchangeShortName === "HKSE" || 
+          result.stock.symbol.endsWith(".HK")
+        );
+        
+        if (hkMatches.length > 0) {
+          deduplicatedResults.push(
+            hkMatches.sort((a, b) => b.confidence - a.confidence)[0]
+          );
+          return;
+        }
+      }
+      
+      if (hasUSHint) {
+        const usMatches = matches.filter(result => 
+          ["NYSE", "NASDAQ", "CBOE", "AMEX", "OTC"].includes(result.stock.exchangeShortName)
+        );
+        
+        if (usMatches.length > 0) {
+          deduplicatedResults.push(
+            usMatches.sort((a, b) => b.confidence - a.confidence)[0]
+          );
+          return;
+        }
+      }
+      
+      if (hasChinaHint) {
+        const chinaMatches = matches.filter(result => 
+          ["SHH", "SHZ"].includes(result.stock.exchangeShortName) ||
+          result.stock.symbol.endsWith(".SS") || 
+          result.stock.symbol.endsWith(".SZ")
+        );
+        
+        if (chinaMatches.length > 0) {
+          deduplicatedResults.push(
+            chinaMatches.sort((a, b) => b.confidence - a.confidence)[0]
+          );
+          return;
+        }
+      }
+      
+      // Default: use the highest confidence result
+      deduplicatedResults.push(
+        matches.sort((a, b) => b.confidence - a.confidence)[0]
+      );
+    });
+    
+    // Take the requested number of results
+    const limitedResults = deduplicatedResults.slice(0, maxResults);
+    
+    // Extract just the symbols
+    const tickers = limitedResults.map(result => result.stock.symbol);
+    
+    console.debug(`Found ${tickers.length} matches for location ${location}`);
+    
+    return tickers;
   }
 }
