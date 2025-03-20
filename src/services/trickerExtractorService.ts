@@ -60,7 +60,7 @@ let currentStockListHash: string = "";
 /**
  * Generates a simple hash for the data
  */
-function generateSourceHash(data: any[]): string {
+function generateSourceHash(data: StockInfo[]): string {
   return JSON.stringify(data)
     .split("")
     .reduce((hash, char) => {
@@ -289,7 +289,7 @@ export class StockTickerParser {
       const isPotentialTicker = isStandardTicker || isTickerWithPrefix || isHKTicker || isChinaATicker || isClassTicker;
       
       if (isPotentialTicker) {
-        let formats = [];
+        const formats = [];
         if (isStandardTicker) formats.push("standard");
         if (isTickerWithPrefix) formats.push("$prefix");
         if (isHKTicker) formats.push("HK");
@@ -395,7 +395,6 @@ export class StockTickerParser {
 
     // Process fuzzy matches for company names in candidates
     console.debug(`[parseQuery] Starting fuzzy search for each candidate`);
-    let fuzzyMatchesFound = 0;
     
     for (const candidate of candidates) {
       // Skip if this candidate already gave us an exact match
@@ -419,7 +418,6 @@ export class StockTickerParser {
             confidence: confidence,
           });
           seenSymbols.add(result.item.symbol);
-          fuzzyMatchesFound++;
         } else {
           console.debug(`[parseQuery] Skipping duplicate fuzzy match: ${result.item.symbol}`);
         }
