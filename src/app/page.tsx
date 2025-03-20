@@ -1,6 +1,43 @@
+'use client';
+
 import Image from "next/image";
+import { useState } from 'react';
 
 export default function Home() {
+  const [translationResult, setTranslationResult] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleTranslate = async () => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // Call the API endpoint
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: '港股阿里巴巴上升趨勢'
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to translate');
+      }
+      
+      const result = await response.json();
+      setTranslationResult(result.translatedText);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -12,6 +49,34 @@ export default function Home() {
           height={38}
           priority
         />
+        
+        <div className="flex flex-col space-y-4 w-full max-w-md p-4 border border-gray-200 rounded-lg">
+          <h2 className="text-xl font-bold">Translation Test</h2>
+          <p className="text-gray-600">Source text: 港股阿里巴巴上升趨勢</p>
+          
+          <button
+            onClick={handleTranslate}
+            disabled={isLoading}
+            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto disabled:opacity-50"
+          >
+            {isLoading ? 'Translating...' : 'Translate to English'}
+          </button>
+          
+          {translationResult && (
+            <div className="p-3 bg-gray-100 rounded">
+              <h3 className="font-medium">Translation Result:</h3>
+              <p>{translationResult}</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="p-3 bg-red-100 text-red-800 rounded">
+              <h3 className="font-medium">Error:</h3>
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
+
         <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
           <li className="mb-2 tracking-[-.01em]">
             Get started by editing{" "}

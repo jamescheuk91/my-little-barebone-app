@@ -41,3 +41,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ### Context Priming
 
 Read README.md, CLAUDE.md, ai_docs/\*, and run git ls-files to understand the project structure.
+
+
+## Assumpations
+
+- The deployed server is abla to access Google API
