@@ -6,16 +6,34 @@ import getConfig from 'next/config';
 const { serverRuntimeConfig } = getConfig();
 
 // Initialize Google Cloud Translation client
-const getTranslateClient = () => {
-  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY || serverRuntimeConfig?.GOOGLE_TRANSLATE_API_KEY;
+const getTranslateClient = (): v2.Translate => {
+  // Get API key from environment or server config
+  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY || 
+                 serverRuntimeConfig?.GOOGLE_TRANSLATE_API_KEY;
   
   if (!apiKey) {
-    console.error('GOOGLE_TRANSLATE_API_KEY environment variable is not set');
+    throw new Error('GOOGLE_TRANSLATE_API_KEY not configured');
   }
   
-  return new v2.Translate({
-    key: apiKey
-  });
+  // Try to get credentials from JSON string
+  const credentialsJSON = serverRuntimeConfig?.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (credentialsJSON) {
+    try {
+      const credentials = JSON.parse(credentialsJSON);
+      return new v2.Translate({ credentials, key: apiKey });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid credentials JSON: ${message}`);
+    }
+  }
+  
+  // Try to get credentials from file path
+  const keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (keyFilename) {
+    return new v2.Translate({ keyFilename, key: apiKey });
+  }
+  
+  throw new Error('Google Cloud Translation credentials not configured');
 };
 
 /**

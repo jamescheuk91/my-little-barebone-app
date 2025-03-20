@@ -45,4 +45,4 @@ Read README.md, CLAUDE.md, ai_docs/\*, and run git ls-files to understand the pr
 
 ## Assumpations
 
-- The deployed server is abla to access Google API
+- The deployed server is able to access Google API
