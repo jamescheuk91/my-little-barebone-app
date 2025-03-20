@@ -1,4 +1,3 @@
-import { Console } from "console";
 import Fuse from "fuse.js";
 import { Stock } from "@/types";
 
@@ -26,7 +25,7 @@ interface MatchResult {
 interface CachedIndex {
   expiresAt: number; // Timestamp when cache expires
   sourceHash: string; // Hash of source data to detect changes
-  index: any;
+  index: unknown; // Fuse index type
 }
 
 /**
@@ -138,7 +137,7 @@ export class StockTickerParser {
    * @param data Optional custom data to index (defaults to stockList)
    * @returns The created index
    */
-  createIndex(data?: StockInfo[]): any {
+  createIndex(data?: StockInfo[]): unknown {
     console.debug("creating new searchable for stock data...");
       
     const sourceData = data || this.stockList;
@@ -206,8 +205,7 @@ export class StockTickerParser {
       {
         keys: ["name"],
         includeScore: true
-      },
-      index
+      }
     );
 
     const fuzzyResults = fuseWithIndex.search(query);
@@ -353,8 +351,7 @@ export class StockTickerParser {
         minMatchCharLength: 2,
         ignoreLocation: true,
         useExtendedSearch: true
-      },
-      index
+      }
     );
 
     // Process fuzzy matches for company names in candidates
@@ -464,7 +461,7 @@ export class StockTickerParser {
     // Identify cross-listed companies and prioritize the right exchange
     let preferredResults: MatchResult[] = [];
     
-    crossListingsMap.forEach((crossListings, companyName) => {
+    crossListingsMap.forEach((crossListings) => {
       if (crossListings.length <= 1) {
         // Not cross-listed, just add all
         preferredResults.push(...crossListings);
@@ -668,7 +665,7 @@ export class StockTickerParser {
     }
     
     // Filter, sort and map the results
-    let filteredResults = preferredResults
+    const filteredResults = preferredResults
       // Apply confidence threshold
       .filter(result => result.confidence >= confidenceThreshold)
       // Apply location filtering if specified, but with special exceptions
@@ -712,7 +709,7 @@ export class StockTickerParser {
     // Process each company to select the most appropriate ticker
     const deduplicatedResults: MatchResult[] = [];
     
-    companiesMap.forEach((matches, companyName) => {
+    companiesMap.forEach(matches => {
       if (matches.length === 1) {
         // Only one result for this company, add it
         deduplicatedResults.push(matches[0]);

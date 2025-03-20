@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processTranslation } from '@/services/translationService';
 import { findStockTickers } from '@/services/trickerExtractorService';
 import { getStockList } from '@/services/stockDataService';
-import { ChatRequest, ParsedResult } from '@/types';
+import { ChatRequest, ParsedResult, Stock } from '@/types';
 
 /**
  * API handler for chat requests
@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
       5     // Default max results
     );
     
-    // Map tickers to full stock objects
+    // Map tickers to full stock objects with proper type assertion
     const stocks = tickers
       .map(ticker => stockList.find(stock => stock.symbol === ticker))
-      .filter(Boolean);
+      .filter((stock): stock is Stock => stock !== undefined);
     
     // Create response with proper format
     const result: ParsedResult = {
