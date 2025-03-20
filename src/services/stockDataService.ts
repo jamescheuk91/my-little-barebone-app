@@ -44,7 +44,7 @@ async function fetchStockList(): Promise<StockData[]> {
     }
     
     const data = await response.json();
-    return data as StockData[];
+    return data.filter((stock: StockData) => stock.type === 'stock');
   } catch (error) {
     console.error('Error fetching stock list:', error);
     throw new Error(`Failed to fetch stock list: ${error instanceof Error ? error.message : String(error)}`);

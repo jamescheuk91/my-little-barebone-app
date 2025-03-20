@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     
     // Process the translation
     const result = await processTranslation(ChatRequest);
-    const list = await getStockList()
-    console.log(list.length)
+    // const list = await getStockList()
+    // console.log(list.length)
 
 
 

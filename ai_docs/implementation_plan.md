@@ -15,7 +15,7 @@ stock-ticker-extractor/
 │   └── api/
 │       └── extract-tickers.ts
 ├── services/
-│   ├── fmpApi.ts
+│   ├── stockDataService.ts
 │   ├── tickerExtractor.ts
 │   └── translationService.ts
 ├── utils/
@@ -30,7 +30,7 @@ stock-ticker-extractor/
 
 ## 2. Core Services Development
 
-- **FMP API Service (`services/fmpApi.ts`)**
+- **FMP API Service (`services/stockDataService.ts`)**
   - Implement API client for FMP
   - Create function to fetch and cache stock list on app initialization
   - Define TypeScript interfaces for API responses
