@@ -29,11 +29,29 @@ interface CachedIndex {
 }
 
 /**
+ * Type for supported locations
+ */
+type SupportedLocation = 'global' | 'US' | 'HK' | 'CN';
+
+/**
+ * Interface for location-specific indexes
+ */
+interface LocationBasedIndexes {
+  [location: string]: {
+    index: Fuse<StockInfo>;
+    stockList: StockInfo[];
+    sourceHash: string;
+    expiresAt: number;
+  }
+}
+
+/**
  * Interface for parser configuration
  */
 interface ParserConfig {
   cacheTTL?: number; // Time to live in milliseconds
   useCache?: boolean; // Whether to use caching
+  buildLocationIndexes?: boolean; // Whether to build location-specific indexes
 }
 
 /**
@@ -128,6 +146,13 @@ export class StockTickerParser {
   private indexCache: CachedIndex | null = null;
   private config: ParserConfig;
   private symbolMap: Record<string, StockInfo> = {}; // Cache symbol lookup map
+  private locationIndexes: LocationBasedIndexes = {}; // Location-specific indexes
+  private exchangeMap: Record<string, string[]> = {
+    "US": ["NYSE", "NASDAQ", "CBOE", "AMEX", "OTC"],
+    "HK": ["HKSE"],
+    "CN": ["SHH", "SHZ"],
+    "global": [] // Empty means include all
+  };
 
   /**
    * Creates a new parser with the provided stock list
@@ -137,10 +162,11 @@ export class StockTickerParser {
     this.config = {
       cacheTTL: 3600000, // 1 hour default
       useCache: true,
+      buildLocationIndexes: true,
       ...config,
     };
 
-    // Configure Fuse.js for fuzzy searching
+    // Configure Fuse.js for fuzzy searching (main global index)
     this.fuse = new Fuse(stockList, {
       keys: [
         { name: "symbol", weight: 0.6 },
@@ -158,6 +184,86 @@ export class StockTickerParser {
     console.debug(`[StockTickerParser] Pre-building symbol lookup map for ${stockList.length} stocks`);
     for (let i = 0; i < this.stockList.length; i++) {
       this.symbolMap[this.stockList[i].symbol] = this.stockList[i];
+    }
+
+    // Build location-specific indexes if enabled
+    if (this.config.buildLocationIndexes) {
+      // Only build indexes for our supported locations
+      const supportedLocations: SupportedLocation[] = ['US', 'HK', 'CN'];
+      this.buildLocationBasedIndexes(supportedLocations);
+    }
+  }
+  
+  /**
+   * Builds indexes specific to each market location
+   * @param locations Array of locations to build indexes for
+   */
+  private buildLocationBasedIndexes(locations: SupportedLocation[]): void {
+    console.debug(`[StockTickerParser] Building location-specific indexes for: ${locations.join(', ')}`);
+    
+    for (const location of locations) {
+      // Skip if it's already built
+      if (this.locationIndexes[location]) {
+        console.debug(`[StockTickerParser] Index for ${location} already exists, skipping`);
+        continue;
+      }
+      
+      // Get the relevant exchanges for this location
+      const targetExchanges = this.exchangeMap[location] || [];
+      
+      // For global, use the entire list
+      if (location === 'global' || targetExchanges.length === 0) {
+        this.locationIndexes[location] = {
+          index: this.fuse,
+          stockList: this.stockList,
+          sourceHash: this.generateSourceHash(this.stockList),
+          expiresAt: Date.now() + (this.config.cacheTTL || 3600000)
+        };
+        console.debug(`[StockTickerParser] Using main index for global location (${this.stockList.length} stocks)`);
+        continue;
+      }
+      
+      // Filter stocks by exchange
+      const locationStocks = this.stockList.filter(stock => 
+        targetExchanges.includes(stock.exchangeShortName)
+      );
+      
+      if (locationStocks.length === 0) {
+        console.debug(`[StockTickerParser] No stocks found for location ${location}, using global index`);
+        this.locationIndexes[location] = {
+          index: this.fuse,
+          stockList: this.stockList,
+          sourceHash: this.generateSourceHash(this.stockList),
+          expiresAt: Date.now() + (this.config.cacheTTL || 3600000)
+        };
+        continue;
+      }
+      
+      console.debug(`[StockTickerParser] Building index for ${location} with ${locationStocks.length} stocks`);
+      
+      // Create a location-specific Fuse index
+      const locationFuse = new Fuse(locationStocks, {
+        keys: [
+          { name: "symbol", weight: 0.6 },
+          { name: "name", weight: 0.4 },
+        ],
+        includeScore: true,
+        threshold: 0.35,
+        minMatchCharLength: 2,
+        ignoreLocation: true,
+        useExtendedSearch: true,
+        distance: 100,
+      });
+      
+      // Save the index
+      this.locationIndexes[location] = {
+        index: locationFuse,
+        stockList: locationStocks,
+        sourceHash: this.generateSourceHash(locationStocks),
+        expiresAt: Date.now() + (this.config.cacheTTL || 3600000)
+      };
+      
+      console.debug(`[StockTickerParser] Successfully built index for ${location}`);
     }
   }
 
@@ -339,10 +445,11 @@ export class StockTickerParser {
    * Uses cached indexes when available
    * @param input Natural language query text
    * @param maxResults Maximum number of results to return per match
+   * @param location Market location to use for search
    * @returns Array of matching stocks with confidence scores
    */
-  private parseQuery(input: string, maxResults: number = 5): MatchResult[] {
-    console.debug(`[parseQuery] START processing query: "${input}", maxResults: ${maxResults}`);
+  private parseQuery(input: string, maxResults: number = 5, location: SupportedLocation = 'global'): MatchResult[] {
+    console.debug(`[parseQuery] START processing query: "${input}", location: ${location}, maxResults: ${maxResults}`);
     const candidates = this.extractCandidates(input);
     console.debug(`[parseQuery] Got ${candidates.length} candidates for matching`);
     
@@ -355,6 +462,15 @@ export class StockTickerParser {
     for (const candidate of candidates) {
       const exactMatch = this.symbolMap[candidate];
       if (exactMatch && !seenSymbols.has(exactMatch.symbol)) {
+        // For non-global locations, only include stocks from the target exchanges
+        if (location !== 'global') {
+          const targetExchanges = this.exchangeMap[location] || [];
+          if (targetExchanges.length > 0 && !targetExchanges.includes(exactMatch.exchangeShortName)) {
+            console.debug(`[parseQuery] Skipping exact match ${exactMatch.symbol} - not in ${location} exchanges`);
+            continue;
+          }
+        }
+        
         console.debug(`[parseQuery] EXACT MATCH: "${candidate}" → ${exactMatch.symbol} (${exactMatch.name}, ${exactMatch.exchangeShortName})`);
         results.push({
           stock: exactMatch,
@@ -366,33 +482,44 @@ export class StockTickerParser {
 
     console.debug(`[parseQuery] Found ${results.length} exact matches`);
 
-    // Get or create index only once for fuzzy matching
-    console.debug(`[parseQuery] Setting up fuzzy search index`);
-    let index =
-      this.config.useCache && this.indexCache ? this.indexCache.index : null;
-    if (!index) {
-      console.debug(`[parseQuery] No cached index available, creating new one`);
-      index = this.createIndex(this.stockList);
+    // Get the appropriate location-based index
+    let fuseIndex: Fuse<StockInfo>;
+    let locationStockList: StockInfo[];
+    
+    // Check if we have a location-specific index
+    if (this.config.buildLocationIndexes && this.locationIndexes[location]) {
+      console.debug(`[parseQuery] Using location-specific index for ${location}`);
+      fuseIndex = this.locationIndexes[location].index;
+      locationStockList = this.locationIndexes[location].stockList;
     } else {
-      console.debug(`[parseQuery] Using cached index`);
-    }
-
-    // Reuse the same Fuse instance with the index for all searches
-    console.debug(`[parseQuery] Initializing Fuse.js with index`);
-    const fuseWithIndex = new Fuse(
-      this.stockList,
-      {
-        keys: [
-          { name: "symbol", weight: 0.3 },
-          { name: "name", weight: 0.7 }
-        ],
-        includeScore: true,
-        threshold: 0.4,
-        minMatchCharLength: 2,
-        ignoreLocation: true,
-        useExtendedSearch: true
+      // If no location-specific index, use the global one
+      console.debug(`[parseQuery] No location-specific index for ${location}, using global index`);
+      
+      // If not found or expired, create index
+      if (!this.indexCache || this.indexCache.expiresAt < Date.now()) {
+        console.debug(`[parseQuery] Creating new global index`);
+        this.createIndex(this.stockList);
       }
-    );
+      
+      // Create a new Fuse instance with the existing (or newly created) index
+      fuseIndex = this.fuse;
+      locationStockList = this.stockList;
+      
+      // For non-global locations, build the index if needed
+      if (location !== 'global' && this.config.buildLocationIndexes) {
+        console.debug(`[parseQuery] Building missing index for ${location}`);
+        this.buildLocationBasedIndexes([location as SupportedLocation]);
+        
+        // Use the newly created index if available
+        if (this.locationIndexes[location]) {
+          console.debug(`[parseQuery] Using newly created index for ${location}`);
+          fuseIndex = this.locationIndexes[location].index;
+          locationStockList = this.locationIndexes[location].stockList;
+        }
+      }
+    }
+    
+    console.debug(`[parseQuery] Using index with ${locationStockList.length} stocks for fuzzy searching`);
 
     // Process fuzzy matches for company names in candidates
     console.debug(`[parseQuery] Starting fuzzy search for each candidate`);
@@ -400,12 +527,23 @@ export class StockTickerParser {
     for (const candidate of candidates) {
       // Skip if this candidate already gave us an exact match
       if (this.symbolMap[candidate]) {
-        console.debug(`[parseQuery] Skipping fuzzy search for "${candidate}" - already found exact match`);
-        continue;
+        const exactMatch = this.symbolMap[candidate];
+        
+        // Check if the exact match is in the current location
+        if (location !== 'global') {
+          const targetExchanges = this.exchangeMap[location] || [];
+          if (targetExchanges.length > 0 && targetExchanges.includes(exactMatch.exchangeShortName)) {
+            console.debug(`[parseQuery] Skipping fuzzy search for "${candidate}" - already found exact match in ${location}`);
+            continue;
+          }
+        } else {
+          console.debug(`[parseQuery] Skipping fuzzy search for "${candidate}" - already found exact match`);
+          continue;
+        }
       }
       
       console.debug(`[parseQuery] Fuzzy searching: "${candidate}"`);
-      const fuzzyMatches = fuseWithIndex.search(candidate, { limit: maxResults });
+      const fuzzyMatches = fuseIndex.search(candidate, { limit: maxResults });
       
       console.debug(`[parseQuery] Found ${fuzzyMatches.length} fuzzy matches for "${candidate}"`);
       fuzzyMatches.forEach((result) => {
@@ -428,7 +566,7 @@ export class StockTickerParser {
     // Also try the full input as a single query to catch company names
     if (input.length > 0) {
       console.debug(`[parseQuery] Trying full text search with entire input`);
-      const nameMatches = fuseWithIndex.search(input, { limit: maxResults });
+      const nameMatches = fuseIndex.search(input, { limit: maxResults });
       
       console.debug(`[parseQuery] Found ${nameMatches.length} full text matches`);
       let fullTextMatchesAdded = 0;
@@ -471,25 +609,17 @@ export class StockTickerParser {
    */
   findStockTickers(
     input: string,
-    location: string = "global",
+    location: SupportedLocation = "global",
     confidenceThreshold: number = 0.3,
     maxResults: number = 5
   ): string[] {
     console.debug(`[findStockTickers] BEGIN processing: "${input}", location: ${location}, threshold: ${confidenceThreshold}`);
     
-    const results = this.parseQuery(input);
-    console.debug(`[findStockTickers] Got ${results.length} initial matches from parseQuery`);
+    const results = this.parseQuery(input, maxResults, location);
+    console.debug(`[findStockTickers] Got ${results.length} initial matches from parseQuery (using ${location} index)`);
     
-    // Define exchanges by location
-    const exchangeMap: Record<string, string[]> = {
-      "US": ["NYSE", "NASDAQ", "CBOE", "AMEX", "OTC"],
-      "HK": ["HKSE"],
-      "CN": ["SHH", "SHZ"],
-      "UK": ["LSE"],
-      "JP": ["TSE"], 
-      "EU": ["XETRA", "EURONEXT"],
-      "global": [] // Empty means include all
-    };
+    // Use the class's exchangeMap for consistency
+    const exchangeMap = this.exchangeMap;
     
     // Define primary exchanges (more recognizable/liquid markets)
     const primaryExchanges = ["NYSE", "NASDAQ", "HKSE", "LSE"];
