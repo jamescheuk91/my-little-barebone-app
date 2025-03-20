@@ -127,6 +127,7 @@ export class StockTickerParser {
   private stockList: StockInfo[];
   private indexCache: CachedIndex | null = null;
   private config: ParserConfig;
+  private symbolMap: Record<string, StockInfo> = {}; // Cache symbol lookup map
 
   /**
    * Creates a new parser with the provided stock list
@@ -152,6 +153,12 @@ export class StockTickerParser {
       useExtendedSearch: true, // Enable more powerful search operators
       distance: 100, // Allow more typos/changes in longer texts
     });
+    
+    // Pre-build symbol lookup map for O(1) access
+    console.debug(`[StockTickerParser] Pre-building symbol lookup map for ${stockList.length} stocks`);
+    for (let i = 0; i < this.stockList.length; i++) {
+      this.symbolMap[this.stockList[i].symbol] = this.stockList[i];
+    }
   }
 
   /**
@@ -342,17 +349,11 @@ export class StockTickerParser {
     const results: MatchResult[] = [];
     const seenSymbols = new Set<string>(); // Track symbols we've already added
 
-    console.debug(`[parseQuery] Building symbol lookup map for ${this.stockList.length} stocks`);
-    // Create a symbol lookup map for O(1) access instead of using Array.find
-    const symbolMap: Record<string, StockInfo> = {};
-    for (let i = 0; i < this.stockList.length; i++) {
-      symbolMap[this.stockList[i].symbol] = this.stockList[i];
-    }
-
-    console.debug(`[parseQuery] Checking for exact symbol matches`);
-    // Try exact symbol matches first using the lookup map (much faster)
+    console.debug(`[parseQuery] Using pre-built symbol lookup map for exact matching`);
+    
+    // Try exact symbol matches first using the cached lookup map (much faster)
     for (const candidate of candidates) {
-      const exactMatch = symbolMap[candidate];
+      const exactMatch = this.symbolMap[candidate];
       if (exactMatch && !seenSymbols.has(exactMatch.symbol)) {
         console.debug(`[parseQuery] EXACT MATCH: "${candidate}" → ${exactMatch.symbol} (${exactMatch.name}, ${exactMatch.exchangeShortName})`);
         results.push({
@@ -398,7 +399,7 @@ export class StockTickerParser {
     
     for (const candidate of candidates) {
       // Skip if this candidate already gave us an exact match
-      if (symbolMap[candidate]) {
+      if (this.symbolMap[candidate]) {
         console.debug(`[parseQuery] Skipping fuzzy search for "${candidate}" - already found exact match`);
         continue;
       }
