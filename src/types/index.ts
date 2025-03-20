@@ -5,6 +5,12 @@ export interface ChatRequest {
   targetLanguage: Language;
 }
 
+
+export interface TranslateRequest {
+  text: string;
+  targetLanguage: Language;
+}
+
 export interface TranslationResponse {
   translatedText: string;
   originalText: string;

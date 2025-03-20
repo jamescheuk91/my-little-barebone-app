@@ -13,6 +13,23 @@ const nextConfig: NextConfig = {
     // Will be available on both server and client
     staticFolder: '/static',
   },
+  // Exclude test files from the build
+  webpack: (config, { dev, isServer }) => {
+    // Only apply in production builds
+    if (!dev) {
+      config.module.rules.push({
+        test: /\.(spec|test)\.(js|ts|tsx)$/,
+        loader: 'ignore-loader',
+      });
+      
+      config.module.rules.push({
+        test: /__tests__/,
+        loader: 'ignore-loader',
+      });
+    }
+    
+    return config;
+  },
 };
 
 export default nextConfig;

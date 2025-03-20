@@ -1,0 +1,12 @@
+# Ignore test files
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Other files to ignore
+node_modules
+.next
+out
+coverage

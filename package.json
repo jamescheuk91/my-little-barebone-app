@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "tsc --project tsconfig.prod.json && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest"
@@ -28,6 +28,7 @@
     "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
+    "ignore-loader": "^0.1.2",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",
