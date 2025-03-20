@@ -1,0 +1,8 @@
+{
+    "crons": [
+      {
+        "path": "/api/refresh_fmp_stock_list_data",
+        "schedule": "*/1 * * * *"
+      }
+    ]
+  }

@@ -1,6 +1,6 @@
 export type Language = 'en'
 
-export interface TranslationRequest {
+export interface ChatRequest {
   text: string;
   targetLanguage: Language;
 }

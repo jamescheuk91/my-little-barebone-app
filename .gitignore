@@ -39,3 +39,5 @@ next-env.d.ts
 *.json.key
 *-service-account.json
 my-little-barebone-app-e9b3dc7d8ce8.json
+
+cache
