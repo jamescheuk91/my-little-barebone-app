@@ -8,8 +8,7 @@ const { serverRuntimeConfig } = getConfig();
 // Initialize Google Cloud Translation client
 const getTranslateClient = (): v2.Translate => {
   // Get API key from environment or server config
-  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY || 
-                 serverRuntimeConfig?.GOOGLE_TRANSLATE_API_KEY;
+  const apiKey = serverRuntimeConfig?.GOOGLE_TRANSLATE_API_KEY;
   
   if (!apiKey) {
     throw new Error('GOOGLE_TRANSLATE_API_KEY not configured');
