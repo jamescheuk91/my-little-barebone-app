@@ -52,7 +52,7 @@ export interface ParsedResult {
  * GLOBAL: Search across all markets
  * US: United States markets (NYSE, NASDAQ, etc.)
  * HK: Hong Kong market (HKSE)
- * CN: Chinese markets (Shanghai, Shenzhen)
+ * CN: Chinese markets (SHH, SHZ)
  */
 export type SupportedLocation = 'GLOBAL' | 'US' | 'HK' | 'CN';
 
