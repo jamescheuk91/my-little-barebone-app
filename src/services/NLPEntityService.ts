@@ -34,17 +34,33 @@ export const findEntities = async (text: string): Promise<string[]> => {
     // Compromise library identification for company names
     const organizations = doc.organizations().out('array');
     const properNouns = doc.match("#ProperNoun").out('array');
+
+    // Extract quoted entities
+    const quotedRegex = /"([^"]+)"/g;
+    const quotedEntities: string[] = [];
+    let quotedMatch;
+    while ((quotedMatch = quotedRegex.exec(text)) !== null) {
+      const quotedDoc = nlp(quotedMatch[1]);
+      const quotedNouns = quotedDoc.match('#Noun').out('array');
+      quotedEntities.push(...quotedNouns);
+    }
     
-    // Get individual company name candidates (single words only)
     const words = text.split(/[\s,.;:!?]+/).filter(Boolean);
     
     // Common words to exclude
     const stopWords = [
-      'stock', 'price', 'compare', 'find', 'me', 'on', 'and', 'thoughts', 'the',
-      'Stock', 'Price', 'Compare', 'Find', 'Me', 'On', 'And', 'Thoughts', 'The',
+      'stock', 'price', 'compare', 'find', 'me', 'on', 'and', 'the',
+      'Stock', 'Price', 'Compare', 'Find', 'Me', 'On', 'And', 'The',
       'for', 'to', 'a', 'an', 'of', 'in', 'with', 'by', 'at', 'from', 'into', 'during',
       'hong', 'kong', 'stocks', 'hong kong', 'hong kong stocks', 'us', 'chinese', 'china',
-      'uptrend', 'downtrend', 'trend', 'performance', 'looking'
+      'uptrend', 'downtrend', 'trend', 'performance', 'looking', 'thoughts', 'thought'
+    ];
+    
+    // Detect and exclude market-related terms
+    const marketTerms: string[] = [
+      'hong kong', 'hong kong stocks', 'hk stock', 'hkse', 'hong', 'kong',
+      'shanghai', 'shenzhen', 'china stock', 'chinese stock', 'a-share', 'a share',
+      'us stock', 'american stock', 'nasdaq', 'nyse', 'wall street'
     ];
     
     // Extract potential single-word company names
@@ -85,35 +101,36 @@ export const findEntities = async (text: string): Promise<string[]> => {
     
     // Filter entities to only include single words
     const extractedEntities = [
+      ...quotedEntities,
       ...tickerSymbols,
       ...tickerMatches,
       ...organizations,
       ...properNouns,
-      ...singleWordEntities,
+      ...singleWordEntities.filter((word: string) => {
+        const wordDoc = doc.match(word);
+        // Keep if it's a proper noun or noun, even if it's also tagged as a verb
+        return wordDoc.has('#Noun') || wordDoc.has('#ProperNoun');
+      }),
       ...phraseEntities,
       ...companyNameCandidates
     ];
     
-    // Detect and exclude market-related terms
-    const marketTerms = [
-      'hong kong', 'hong kong stocks', 'hk stock', 'hkse', 'hong', 'kong',
-      'shanghai', 'shenzhen', 'china stock', 'chinese stock', 'a-share', 'a share',
-      'us stock', 'american stock', 'nasdaq', 'nyse', 'wall street'
-    ];
+    // Convert to lowercase for case-insensitive filtering
+    const lowerStopWords: string[] = stopWords.map(word => word.toLowerCase());
+    const lowerMarketTerms: string[] = marketTerms.map(term => term.toLowerCase());
     
     // Process and clean each entity, handling quotes and other characters
     const cleanedEntities = [...new Set(extractedEntities)]
-      .map(entity => {
+      .map((entity: string) => {
         // First trim the entity and remove quotes
-        let cleaned = trimQuotes(entity);
+        const cleaned = trimQuotes(entity);
         // Then remove other unnecessary characters
-        cleaned = cleaned.replace(/[,.'$"]/g, '').trim();
-        return cleaned;
+        return cleaned.replace(/[,.'$"]/g, '').trim();
       })
       .filter(entity => 
         entity.length > 1 && 
-        !stopWords.includes(entity.toLowerCase()) &&
-        !marketTerms.includes(entity.toLowerCase()) &&
+        !lowerStopWords.includes(entity.toLowerCase()) &&
+        !lowerMarketTerms.includes(entity.toLowerCase()) &&
         !/stock price/i.test(entity) &&
         !/find me/i.test(entity) &&
         !/upward/i.test(entity) &&
