@@ -91,6 +91,13 @@ describe("TickerExtractorService", () => {
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "NVDA" })]));
         
     });
+    
+    // Test for the bug where the user specifies Hong Kong in query but location is set to US
+    it("should extract Alibaba HK stock when Hong Kong is specified in query text, even when US is set as location", async() => {
+        const result = await extractTickers("\"Hong Kong Stock Alibaba Upward Trend\"", "US", defaultLanguage);
+        // Should find Hong Kong stock 9988.HK despite US location being specified
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(alibaba9988HKStock)]));
+    });
 
     it("should extract Micosft US Stock from 'Micorsft stock' (example of typo) in US", async() => {
         const result = await extractTickers("Micorsft stock", "US", defaultLanguage);

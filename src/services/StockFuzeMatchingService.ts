@@ -183,11 +183,13 @@ export const searchStocks = async (query: string, userSelectedLocation: Supporte
   const results: StockSearchResult[] = [];
   
   // Step 1: Check for market-specific keywords in the queryText
-  if (queryText && userSelectedLocation === 'GLOBAL') {
+  if (queryText) {
     const detectedMarket = detectMarketFocus(queryText);
     if (detectedMarket) {
+      // Always use the detected market regardless of user selection
+      // This ensures that when a user mentions "Hong Kong" in a query, we search in HK
       focusedMarketLocation = detectedMarket;
-      console.log(`[searchStocks] Market focus detected in query. Switching to ${focusedMarketLocation} location for search.`);
+      console.log(`[searchStocks] Market focus detected in query ("${detectedMarket}"). ${userSelectedLocation !== detectedMarket ? `Overriding user selection (${userSelectedLocation}).` : ''} Switching to ${focusedMarketLocation} location for search.`);
     }
   }
   
