@@ -158,7 +158,15 @@ const detectMarketFocus = (translatedQuery: string): SupportedLocation | null =>
   const normalizedQuery = translatedQuery.toLowerCase();
   
   // Keywords that indicate Hong Kong market focus
+  // Added 'hong kong stocks' to better detect combined mentions like "Alibaba Hong Kong stocks"
   const hkKeywords = ['hong kong', 'hk stock', 'hong kong stock', 'hong kong stocks', '港股', 'hkse', 'hkex'];
+  
+  // Special case for "company name + Hong Kong" pattern that often indicates HK stocks
+  if (normalizedQuery.includes('hong kong')) {
+    console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${translatedQuery}"`);
+    return 'HK';
+  }
+  
   if (hkKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${translatedQuery}"`);
     return 'HK';
@@ -181,36 +189,64 @@ const detectMarketFocus = (translatedQuery: string): SupportedLocation | null =>
   return null;
 };
 
-export const searchStocks = async (query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage, translatedQuery?: string): Promise<StockSearchResult[]> => {
-  console.log(`[searchStocks] Wrapper function called with query: "${query}", location: "${location}", language: "${selectedLanguage}"`);
+export const searchStocks = async (query: string, userSelectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage, translatedQuery?: string): Promise<StockSearchResult[]> => {
+  console.log(`[searchStocks] Wrapper function called with query: "${query}", userSelectedLocation: "${userSelectedLocation}", language: "${selectedLanguage}"`);
   
   // Determine the optimal search location based on various factors
-  let searchLocation = location;
+  let focusedMarketLocation = userSelectedLocation;
+  const results: StockSearchResult[] = [];
   
   // Step 1: Check for market-specific keywords in the translatedQuery
-  if (translatedQuery && location === 'GLOBAL') {
+  if (translatedQuery && userSelectedLocation === 'GLOBAL') {
     const detectedMarket = detectMarketFocus(translatedQuery);
     if (detectedMarket) {
-      searchLocation = detectedMarket;
-      console.log(`[searchStocks] Market focus detected in query. Switching to ${searchLocation} location for search.`);
+      focusedMarketLocation = detectedMarket;
+      console.log(`[searchStocks] Market focus detected in query. Switching to ${focusedMarketLocation} location for search.`);
     }
   }
   
   // Step 2: For non-English languages with global location, select a specific market location
-  if (searchLocation === 'GLOBAL' && selectedLanguage !== 'en') {
+  if (focusedMarketLocation === 'GLOBAL' && selectedLanguage !== 'en') {
     if (selectedLanguage === 'zh-CN') {
-      searchLocation = 'CN';
+      focusedMarketLocation = 'CN';
       console.log(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
     } else if (selectedLanguage === 'zh-TW') {
-      searchLocation = 'HK';
+      focusedMarketLocation = 'HK';
       console.log(`[searchStocks] Non-English language with global location detected. Switching to HK location for search.`);
     }
   }
   
   try {
-    const result = await stockFuzeMatchingService.search(query, searchLocation, selectedLanguage);
-    console.log(`[searchStocks] Wrapper function returning ${result ? 'one result' : 'no results'}`);
-    return result ? [result] : [];
+    // If we've detected a specific market from the query and it wasn't explicitly selected by the user
+    if (focusedMarketLocation !== userSelectedLocation) {
+      console.log(`[searchStocks] First searching in detected market: ${focusedMarketLocation}`);
+      // Try market-specific search first
+      const marketSpecificResult = await stockFuzeMatchingService.search(query, focusedMarketLocation, selectedLanguage);
+      if (marketSpecificResult) {
+        results.push(marketSpecificResult);
+        console.log(`[searchStocks] Found result in detected market ${focusedMarketLocation} for "${query}": ${marketSpecificResult.item.symbol}`);
+      }
+      
+      // If we didn't find anything in the detected market, fallback to global search
+      if (results.length === 0) {
+        console.log(`[searchStocks] No results in detected market. Falling back to user selected location: ${userSelectedLocation}`);
+        const globalResult = await stockFuzeMatchingService.search(query, userSelectedLocation, selectedLanguage);
+        if (globalResult) {
+          results.push(globalResult);
+          console.log(`[searchStocks] Found fallback result for "${query}": ${globalResult.item.symbol}`);
+        }
+      }
+    } else {
+      // Use the user's selected location directly
+      const result = await stockFuzeMatchingService.search(query, focusedMarketLocation, selectedLanguage);
+      if (result) {
+        results.push(result);
+        console.log(`[searchStocks] Found result in ${focusedMarketLocation} for "${query}": ${result.item.symbol}`);
+      }
+    }
+    
+    console.log(`[searchStocks] Wrapper function returning ${results.length} results`);
+    return results;
   } catch (error) {
     console.error(`[searchStocks] Wrapper function error for query "${query}":`, error);
     return [];

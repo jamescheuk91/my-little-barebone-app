@@ -88,7 +88,7 @@ describe("TickerExtractorService", () => {
     it ("should extract 9988.HK and NVDA from 'compare Alibaba Hong Kong stocks and NVDA' in GLOBAL", async() => {
         const result = await extractTickers("compare Alibaba Hong Kong stocks and NVDA", "GLOBAL", defaultLanguage);
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining(alibaba9988HKStock)]));
-        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(alibaba9988HKStock)]));
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "NVDA" })]));
         
     });
 

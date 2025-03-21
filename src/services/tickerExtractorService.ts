@@ -8,7 +8,7 @@ const LOCATION_EXCHANGES: Record<SupportedLocation, string[]> = {
   'GLOBAL': [],
   'US': ['NYSE', 'NASDAQ', 'AMEX', 'OTC'],
   'CN': ['SHANGHAI', 'SHENZHEN', 'SHH', 'SHZ'],
-  'HK': ['HONG KONG STOCK EXCHANGE', 'HKSE', 'HKG']
+  'HK': ['HONG KONG', 'HONG KONG STOCK EXCHANGE', 'HKSE', 'HKG']
 };
 
 /**
@@ -112,15 +112,15 @@ export class TickerExtractorService {
    * @param location The location to filter by
    * @returns An array of stocks that fuzzy match the entities
    */
-  private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
+  private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage, translatedQuery: string): Promise<Stock[]> {
     console.log('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
     
-    // Get the full translated query for market focus detection
-    const translatedQuery = entities.join(' ');
+    console.log(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${translatedQuery}"`);
     
     // Create an array of promises for parallel processing
     const fuzzyMatchPromises = entities.map(async entity => {
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
+      // Pass the full original query to provide context for market detection
       const matchResults = await searchStocks(entity, location, selectedLanguage, translatedQuery);
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
       
@@ -159,15 +159,15 @@ export class TickerExtractorService {
   
   /**
    * Extracts stock tickers from the input text
-   * @param text The input text to extract tickers from
+   * @param translatedQuery The input text to extract tickers from
    * @param location The location to filter by
    * @returns An array of extracted stocks
    */
-  async extractTickers(text: string, selectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
-    console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${text}", selectedLocation: ${selectedLocation}`);
+  async extractTickers(translatedQuery: string, selectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
+    console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${translatedQuery}", selectedLocation: ${selectedLocation}`);
     
-    if (!text || text.trim() === '') {  
-      console.log('[TickerExtractorService] extractTickers() - Empty text provided, returning empty array');
+    if (!translatedQuery || translatedQuery.trim() === '') {  
+      console.log('[TickerExtractorService] extractTickers() - Empty translatedQuery provided, returning empty array');
       return [];
     }
     
@@ -180,9 +180,9 @@ export class TickerExtractorService {
         console.log(`[TickerExtractorService] extractTickers() - StockInfoMap already contains ${this.stockInfoMap.size} entries`);
       }
       
-      // Extract entities from text
+      // Extract entities from translatedQuery
       console.log('[TickerExtractorService] extractTickers() - Calling findEntities to extract potential entities');
-      const entities = await findEntities(text);
+      const entities = await findEntities(translatedQuery);
       console.log(`[TickerExtractorService] extractTickers() - Found ${entities.length} entities: ${JSON.stringify(entities)}`);
       
       if (entities.length === 0) {
@@ -194,7 +194,7 @@ export class TickerExtractorService {
       console.log(`[TickerExtractorService] extractTickers() - Direct matches: ${directMatches.length}`);
       
       // Find fuzzy matches
-      const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage);
+      const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage, translatedQuery);
       console.log(`[TickerExtractorService] extractTickers() - Total fuzzy matches: ${fuzzyMatches.length}`);
       
       // Combine and deduplicate matches
