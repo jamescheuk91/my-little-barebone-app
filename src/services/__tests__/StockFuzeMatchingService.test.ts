@@ -4,6 +4,7 @@ import {
   searchStocks,
 } from "../StockFuzeMatchingService";
 import { Stock, SupportedLocation } from "../../types";
+import { MarketLocation } from "../../types/market";
 
 // Mock the getStockList function
 jest.mock("../StockDataService", () => ({
@@ -187,7 +188,7 @@ describe("StockFuzeMatchingService", () => {
 
   it("should find AAPL with 'Apple' with US", async () => {
     const entity = "Apple";
-    const results = await searchStocks(entity, "US", 'en');
+    const results = await searchStocks(entity, MarketLocation.US, 'en');
 
     // The search should return Apple Inc.
     expect(results.length).toBeGreaterThan(0);

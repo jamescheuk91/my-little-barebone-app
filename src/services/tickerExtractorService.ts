@@ -1,6 +1,7 @@
 import { findEntities } from './NLPEntityService';
 import { getStockList } from './StockDataService';
 import { SupportedLanguage, Stock, SupportedLocation } from '@/types';
+import { Exchange, MarketLocation } from '@/types/market';
 import { searchStocks } from './StockFuzeMatchingService';
 
 /**
@@ -12,11 +13,11 @@ interface StockWithMatchInfo extends Stock {
 }
 
 // Define mapping of exchanges by location for cleaner code
-const LOCATION_EXCHANGES: Record<SupportedLocation, string[]> = {
-  'GLOBAL': [],
-  'US': ['NYSE', 'NASDAQ', 'AMEX', 'OTC'],
-  'CN': ['SHANGHAI', 'SHENZHEN', 'SHH', 'SHZ'],
-  'HK': ['HONG KONG', 'HONG KONG STOCK EXCHANGE', 'HKSE', 'HKG']
+const LOCATION_EXCHANGES = {
+  [MarketLocation.GLOBAL]: [],
+  [MarketLocation.US]: [Exchange.NYSE, Exchange.NASDAQ, 'AMEX', 'OTC'],
+  [MarketLocation.CN]: ['SHANGHAI', 'SHENZHEN', Exchange.SHH, Exchange.SHZ],
+  [MarketLocation.HK]: ['HONG KONG', 'HONG KONG STOCK EXCHANGE', Exchange.HKSE, 'HKG']
 };
 
 /**
@@ -71,7 +72,7 @@ export class TickerExtractorService {
    */
   private stockMatchesLocation(stock: Stock, location: SupportedLocation): boolean {
     // Global location includes all exchanges
-    if (location === 'GLOBAL') {
+    if (location === MarketLocation.GLOBAL) {
       return true;
     }
     
@@ -195,7 +196,7 @@ export class TickerExtractorService {
     // Make a copy to avoid mutating the original array
     const prioritizedStocks = [...stocks];
     
-    if (location === 'GLOBAL') {
+    if (location === MarketLocation.GLOBAL) {
       // For GLOBAL, prioritize direct symbol matches and stocks with higher matching scores
       console.log('[TickerExtractorService] prioritizeExchanges() - Applying GLOBAL priority: direct symbol matches and higher scores');
       
@@ -219,7 +220,7 @@ export class TickerExtractorService {
         
         return 0; // Keep original order for equal matches
       });
-    } else if (location === 'US') {
+    } else if (location === MarketLocation.US) {
       // In US, prioritize NYSE, then NASDAQ
       console.log('[TickerExtractorService] prioritizeExchanges() - Applying US exchange priority: NYSE, NASDAQ');
       prioritizedStocks.sort((a, b) => {
@@ -227,16 +228,16 @@ export class TickerExtractorService {
         const exchangeB = b.exchangeShortName?.toUpperCase() || '';
         
         // Prioritize NYSE first
-        if (exchangeA === 'NYSE' && exchangeB !== 'NYSE') return -1;
-        if (exchangeB === 'NYSE' && exchangeA !== 'NYSE') return 1;
+        if (exchangeA === Exchange.NYSE && exchangeB !== Exchange.NYSE) return -1;
+        if (exchangeB === Exchange.NYSE && exchangeA !== Exchange.NYSE) return 1;
         
         // Then prioritize NASDAQ
-        if (exchangeA === 'NASDAQ' && exchangeB !== 'NASDAQ') return -1;
-        if (exchangeB === 'NASDAQ' && exchangeA !== 'NASDAQ') return 1;
+        if (exchangeA === Exchange.NASDAQ && exchangeB !== Exchange.NASDAQ) return -1;
+        if (exchangeB === Exchange.NASDAQ && exchangeA !== Exchange.NASDAQ) return 1;
         
         return 0; // Keep original order for equal priority
       });
-    } else if (location === 'CN') {
+    } else if (location === MarketLocation.CN) {
       // In CN, prioritize SHH, then SHZ
       console.log('[TickerExtractorService] prioritizeExchanges() - Applying CN exchange priority: SHH, SHZ');
       prioritizedStocks.sort((a, b) => {
@@ -244,16 +245,16 @@ export class TickerExtractorService {
         const exchangeB = b.exchangeShortName?.toUpperCase() || '';
         
         // Prioritize SHH first
-        if (exchangeA === 'SHH' && exchangeB !== 'SHH') return -1;
-        if (exchangeB === 'SHH' && exchangeA !== 'SHH') return 1;
+        if (exchangeA === Exchange.SHH && exchangeB !== Exchange.SHH) return -1;
+        if (exchangeB === Exchange.SHH && exchangeA !== Exchange.SHH) return 1;
         
         // Then prioritize SHZ
-        if (exchangeA === 'SHZ' && exchangeB !== 'SHZ') return -1;
-        if (exchangeB === 'SHZ' && exchangeA !== 'SHZ') return 1;
+        if (exchangeA === Exchange.SHZ && exchangeB !== Exchange.SHZ) return -1;
+        if (exchangeB === Exchange.SHZ && exchangeA !== Exchange.SHZ) return 1;
         
         return 0; // Keep original order for equal priority
       });
-    } else if (location === 'HK') {
+    } else if (location === MarketLocation.HK) {
       // For HK, we don't need special sorting as we only have HKSE
       console.log('[TickerExtractorService] prioritizeExchanges() - No special sorting needed for HK');
     }

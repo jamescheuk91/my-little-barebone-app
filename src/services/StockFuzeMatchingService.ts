@@ -1,6 +1,7 @@
 import Fuse, { FuseResult } from "fuse.js";
 import { getStockList } from "./StockDataService";
 import { Stock, SupportedLanguage, SupportedLocation } from "@/types";
+import { Exchange, MarketLocation } from "@/types/market";
 
 // Define a type for the search result that includes the score
 export interface StockSearchResult {
@@ -38,41 +39,41 @@ export class StockFuzeMatchingService {
         includeScore: true,
 
       };
-      this.fuseIndices.set("GLOBAL", new Fuse(stockList, fuzeIndexOptions));
-      this.stockCounts.set("GLOBAL", stockList.length);
+      this.fuseIndices.set(MarketLocation.GLOBAL, new Fuse(stockList, fuzeIndexOptions));
+      this.stockCounts.set(MarketLocation.GLOBAL, stockList.length);
       
       // US stocks index (NYSE, NASDAQ, etc.)
       console.log('[StockFuzeMatchingService] initialize() - Filtering US stocks');
       const usStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase()
-        return exchange && ["NYSE", "NASDAQ", "AMEX", "OTC"].includes(exchange);
+        return exchange && [Exchange.NYSE, Exchange.NASDAQ, Exchange.AMEX].includes(exchange as Exchange);
       });
 
       console.log(`[StockFuzeMatchingService] initialize() - Creating US Fuse index with ${usStocks.length} stocks`);
-      this.fuseIndices.set("US", new Fuse(usStocks, fuzeIndexOptions));
-      this.stockCounts.set("US", usStocks.length);
+      this.fuseIndices.set(MarketLocation.US, new Fuse(usStocks, fuzeIndexOptions));
+      this.stockCounts.set(MarketLocation.US, usStocks.length);
       
       // CN stocks index (SHH , SHZ)
       console.log('[StockFuzeMatchingService] initialize() - Filtering CN stocks');
       const cnStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase();
-        return exchange && ["SHH", "SHZ"].includes(exchange);
+        return exchange && [Exchange.SHH, Exchange.SHZ].includes(exchange as Exchange);
       });
       
       console.log(`[StockFuzeMatchingService] initialize() - Creating CN Fuse index with ${cnStocks.length} stocks`);
-      this.fuseIndices.set("CN", new Fuse(cnStocks, fuzeIndexOptions));
-      this.stockCounts.set("CN", cnStocks.length);
+      this.fuseIndices.set(MarketLocation.CN, new Fuse(cnStocks, fuzeIndexOptions));
+      this.stockCounts.set(MarketLocation.CN, cnStocks.length);
       
       // HK stocks index (Hong Kong)
       console.log('[StockFuzeMatchingService] initialize() - Filtering HK stocks');
       const hkStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase();
-        return exchange === "HKSE";
+        return exchange === Exchange.HKSE;
       });
       
       console.log(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
-      this.fuseIndices.set("HK", new Fuse(hkStocks, fuzeIndexOptions));
-      this.stockCounts.set("HK", hkStocks.length);
+      this.fuseIndices.set(MarketLocation.HK, new Fuse(hkStocks, fuzeIndexOptions));
+      this.stockCounts.set(MarketLocation.HK, hkStocks.length);
 
       this.isInitialized = true;
       console.log(`[StockFuzeMatchingService] initialize() - Initialization complete with indices for: ${Array.from(this.fuseIndices.keys()).join(', ')}`);
@@ -150,26 +151,26 @@ const detectMarketFocus = (queryText: string): SupportedLocation | null => {
   // Special case for "company name + Hong Kong" pattern that often indicates HK stocks
   if (normalizedQuery.includes('hong kong')) {
     console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
-    return 'HK';
+    return MarketLocation.HK;
   }
   
   if (hkKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
-    return 'HK';
+    return MarketLocation.HK;
   }
   
   // Keywords that indicate China market focus
   const cnKeywords = ['shanghai', 'shenzhen', 'a-share', 'a share', 'china stock', 'china stocks', 'chinese stock', 'chinese stocks', '中国股', '中国股票', 'a股'];
   if (cnKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] China market focus detected in: "${queryText}"`);
-    return 'CN';
+    return MarketLocation.CN;
   }
   
   // Keywords that indicate US market focus
   const usKeywords = ['nasdaq', 'nyse', 'us stock', 'us stocks', 'american stock', 'american stocks', 'wall street', 'us share', 'us shares'];
   if (usKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] US market focus detected in: "${queryText}"`);
-    return 'US';
+    return MarketLocation.US;
   }
   
   return null;
@@ -196,10 +197,10 @@ export const searchStocks = async (query: string, userSelectedLocation: Supporte
   // Step 2: For non-English languages with global location, select a specific market location
   if (focusedMarketLocation === 'GLOBAL' && selectedLanguage !== 'en') {
     if (selectedLanguage === 'zh-CN') {
-      focusedMarketLocation = 'CN';
+      focusedMarketLocation = MarketLocation.CN;
       console.log(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
     } else if (selectedLanguage === 'zh-TW') {
-      focusedMarketLocation = 'HK';
+      focusedMarketLocation = MarketLocation.HK;
       console.log(`[searchStocks] Non-English language with global location detected. Switching to HK location for search.`);
     }
   }

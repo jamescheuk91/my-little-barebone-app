@@ -1,3 +1,5 @@
+import { ExchangeShortName } from './market';
+
 /**
  * Supported languages for translation and chat functionality
  * en: English
@@ -26,7 +28,7 @@ export interface Stock {
   name: string;
   price?: number;
   exchange?: string;
-  exchangeShortName?: string;
+  exchangeShortName?: ExchangeShortName;
   type: string;
 }
 
@@ -47,14 +49,7 @@ export interface ParsedResult {
   originalQuery?: string;
 }
 
-/**
- * Supported market locations for stock searches
- * GLOBAL: Search across all markets
- * US: United States markets (NYSE, NASDAQ, etc.)
- * HK: Hong Kong market (HKSE)
- * CN: Chinese markets (SHH, SHZ)
- */
-export type SupportedLocation = 'GLOBAL' | 'US' | 'HK' | 'CN';
+export type { MarketLocation as SupportedLocation } from './market';
 
 /**
  * Interface representing stock information used internally by the parser
@@ -63,7 +58,7 @@ export type SupportedLocation = 'GLOBAL' | 'US' | 'HK' | 'CN';
 export interface StockInfo {
   symbol: string;
   name: string;
-  exchangeShortName: string;
+  exchangeShortName: ExchangeShortName;
 }
 
 /**
