@@ -158,6 +158,72 @@ export class TickerExtractorService {
   }
   
   /**
+   * Prioritizes stocks by exchange based on location
+   * @param stocks The stocks to prioritize
+   * @param location The location to determine the exchange priority
+   * @returns The prioritized stocks
+   */
+  private prioritizeExchanges(stocks: Stock[], location: SupportedLocation): Stock[] {
+    console.log(`[TickerExtractorService] prioritizeExchanges() - Prioritizing ${stocks.length} stocks for location: ${location}`);
+    
+    if (stocks.length <= 1) {
+      return stocks; // No need to sort if there's 0 or 1 item
+    }
+    
+    // Make a copy to avoid mutating the original array
+    let prioritizedStocks = [...stocks];
+    
+    if (location === 'US') {
+      // In US, prioritize NYSE, then NASDAQ
+      console.log('[TickerExtractorService] prioritizeExchanges() - Applying US exchange priority: NYSE, NASDAQ');
+      prioritizedStocks.sort((a, b) => {
+        const exchangeA = a.exchangeShortName?.toUpperCase() || '';
+        const exchangeB = b.exchangeShortName?.toUpperCase() || '';
+        
+        // Prioritize NYSE first
+        if (exchangeA === 'NYSE' && exchangeB !== 'NYSE') return -1;
+        if (exchangeB === 'NYSE' && exchangeA !== 'NYSE') return 1;
+        
+        // Then prioritize NASDAQ
+        if (exchangeA === 'NASDAQ' && exchangeB !== 'NASDAQ') return -1;
+        if (exchangeB === 'NASDAQ' && exchangeA !== 'NASDAQ') return 1;
+        
+        return 0; // Keep original order for equal priority
+      });
+    } else if (location === 'CN') {
+      // In CN, prioritize SHH, then SHZ
+      console.log('[TickerExtractorService] prioritizeExchanges() - Applying CN exchange priority: SHH, SHZ');
+      prioritizedStocks.sort((a, b) => {
+        const exchangeA = a.exchangeShortName?.toUpperCase() || '';
+        const exchangeB = b.exchangeShortName?.toUpperCase() || '';
+        
+        // Prioritize SHH first
+        if (exchangeA === 'SHH' && exchangeB !== 'SHH') return -1;
+        if (exchangeB === 'SHH' && exchangeA !== 'SHH') return 1;
+        
+        // Then prioritize SHZ
+        if (exchangeA === 'SHZ' && exchangeB !== 'SHZ') return -1;
+        if (exchangeB === 'SHZ' && exchangeA !== 'SHZ') return 1;
+        
+        return 0; // Keep original order for equal priority
+      });
+    } else if (location === 'HK') {
+      // For HK, we don't need special sorting as we only have HKSE
+      console.log('[TickerExtractorService] prioritizeExchanges() - No special sorting needed for HK');
+    }
+    
+    // Log the prioritization results
+    if (prioritizedStocks.length > 0) {
+      console.log('[TickerExtractorService] prioritizeExchanges() - Exchange prioritization results:');
+      prioritizedStocks.slice(0, Math.min(3, prioritizedStocks.length)).forEach((stock, i) => {
+        console.log(`[TickerExtractorService] prioritizeExchanges() - #${i+1}: Symbol: ${stock.symbol}, Exchange: ${stock.exchangeShortName || stock.exchange}`);
+      });
+    }
+    
+    return prioritizedStocks;
+  }
+  
+  /**
    * Extracts stock tickers from the input text
    * @param translatedQuery The input text to extract tickers from
    * @param location The location to filter by
@@ -201,7 +267,11 @@ export class TickerExtractorService {
       const allMatches = this.deduplicate([...directMatches, ...fuzzyMatches]);
       console.log(`[TickerExtractorService] extractTickers() - Total unique matches: ${allMatches.length}`);
       
-      return allMatches;
+      // Sort matches by exchange priority based on the selected location
+      const sortedMatches = this.prioritizeExchanges(allMatches, selectedLocation);
+      console.log(`[TickerExtractorService] extractTickers() - Returning sorted matches by exchange priority`);
+      
+      return sortedMatches;
     } catch (error) {
       console.error('[TickerExtractorService] extractTickers() - Error:', error);
       return [];
