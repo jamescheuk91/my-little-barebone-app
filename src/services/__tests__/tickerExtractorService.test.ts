@@ -118,4 +118,17 @@ describe("TickerExtractorService", () => {
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining(pineappleStock)]));
     });
+
+    it("should extract multiple stock tickers from text with company names and stock tickers", async() => {
+        const text = "GOOGL, GOOGL, GOOGL, Apple, Amazon, Teslaaa";
+        const result = await extractTickers(text, "US", defaultLanguage);
+
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "GOOGL" })]));
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "AMZN" })]));
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "TSLA" })]));
+    });
+
+
+    
 });

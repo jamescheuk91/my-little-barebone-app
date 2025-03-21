@@ -27,14 +27,18 @@ export class StockFuzeMatchingService {
       
       // Global index (all stocks)
       console.log('[StockFuzeMatchingService] initialize() - Creating global Fuse index for all stocks');
-      this.fuseIndices.set("GLOBAL", new Fuse(stockList, {
-        keys: ["name", "symbol"],  // Search in both name and symbol
-        threshold: 0.5,            // Significantly higher to allow for more typos
-        minMatchCharLength: 2,     
+      const fuzeIndexOptions = {
+        keys: ["name", "symbol"],         // Search in both name and symbol
+        threshold: 0.6,                   // Very high to catch severe typos like "Micorsft"
+        isCaseSensitive: false,           // Case insensitive matching
+        minMatchCharLength: 2,            // Lower to catch shorter matches
+        ignoreLocation: true,             // Better for handling typos
+        distance: 200,                    // Large distance for better fuzzy matching
+        useExtendedSearch: true,          // Enable extended search for more flexibility
         includeScore: true,
-        distance: 200,             // Increased for better typo tolerance
-        ignoreLocation: true       // Important for handling typos and transpositions
-      }));
+
+      };
+      this.fuseIndices.set("GLOBAL", new Fuse(stockList, fuzeIndexOptions));
       this.stockCounts.set("GLOBAL", stockList.length);
       
       // US stocks index (NYSE, NASDAQ, etc.)
@@ -45,16 +49,7 @@ export class StockFuzeMatchingService {
       });
 
       console.log(`[StockFuzeMatchingService] initialize() - Creating US Fuse index with ${usStocks.length} stocks`);
-      this.fuseIndices.set("US", new Fuse(usStocks, {
-        keys: ["name", "symbol"],         // Search in both name and symbol
-        threshold: 0.6,                   // Very high to catch severe typos like "Micorsft"
-        isCaseSensitive: false,           // Case insensitive matching
-        minMatchCharLength: 2,            // Lower to catch shorter matches
-        ignoreLocation: true,             // Better for handling typos
-        includeScore: true,
-        distance: 200,                    // Large distance for better fuzzy matching
-        useExtendedSearch: true,          // Enable extended search for more flexibility
-      }));
+      this.fuseIndices.set("US", new Fuse(usStocks, fuzeIndexOptions));
       this.stockCounts.set("US", usStocks.length);
       
       // CN stocks index (SHH , SHZ)
@@ -65,13 +60,7 @@ export class StockFuzeMatchingService {
       });
       
       console.log(`[StockFuzeMatchingService] initialize() - Creating CN Fuse index with ${cnStocks.length} stocks`);
-      this.fuseIndices.set("CN", new Fuse(cnStocks, {
-        keys: ["name", "symbol"],         // Search in both name and symbol
-        threshold: 0.35,
-        minMatchCharLength: 2,
-        // useExtendedSearch: true,
-        includeScore: true
-      }));
+      this.fuseIndices.set("CN", new Fuse(cnStocks, fuzeIndexOptions));
       this.stockCounts.set("CN", cnStocks.length);
       
       // HK stocks index (Hong Kong)
@@ -82,13 +71,7 @@ export class StockFuzeMatchingService {
       });
       
       console.log(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
-      this.fuseIndices.set("HK", new Fuse(hkStocks, {
-        keys: ["name", "symbol"],         // Search in both name and symbol
-        threshold: 0.35,
-        minMatchCharLength: 2,
-        // useExtendedSearch: true,
-        includeScore: true
-      }));
+      this.fuseIndices.set("HK", new Fuse(hkStocks, fuzeIndexOptions));
       this.stockCounts.set("HK", hkStocks.length);
 
       this.isInitialized = true;

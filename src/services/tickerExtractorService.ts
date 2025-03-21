@@ -193,7 +193,7 @@ export class TickerExtractorService {
     }
     
     // Make a copy to avoid mutating the original array
-    let prioritizedStocks = [...stocks];
+    const prioritizedStocks = [...stocks];
     
     if (location === 'GLOBAL') {
       // For GLOBAL, prioritize direct symbol matches and stocks with higher matching scores
