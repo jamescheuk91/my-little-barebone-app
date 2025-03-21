@@ -26,46 +26,90 @@ describe("TickerExtractorService", () => {
         type: "stock"
     };
 
+    const hsbcUSStock: Stock = {
+        symbol: "HSBC",
+        name: "HSBC Holdings plc",
+        exchange: "New York Stock Exchange",
+        exchangeShortName: "NYSE", // This is correct as is
+        type: "stock"
+    };
 
 
 
-    it("should extract Apple stock from 'apple stock price'", async() => {
+    const hsbc0005HKStock: Stock = {
+        symbol: "0005.HK",
+        name: "HSBC Holdings plc",
+        exchange: "Hong Kong Stock Exchange", // This exchange name is correct
+        exchangeShortName: "HKSE",
+        type: "stock"
+    };
+
+
+    it("should extract Apple stock from 'apple stock price' in US", async() => {
         const result = await extractTickers("apple stock price", "US");
-        expect.objectContaining(appleStock);
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
     });
 
 
-    it("should not extract Apple stock from 'apple stock price'", async() => {
+    it("should not extract Apple stock from 'apple stock price' in HK", async() => {
         const result = await extractTickers("apple stock price", "HK");
-        expect.objectContaining(appleStock);
+        expect(result).not.toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
+    });
+
+    it("should extract 9988.HK from 'Alibaba stock price' in HK", async() => {
+        const result = await extractTickers("Alibaba stock price", "HK");
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(alibaba9988HKStock)]));
+    });
+
+    it("should extract HSBC US Stock from 'HSBC stock price' in US", async() => {
+        const result = await extractTickers("HSBC stock price", "US");
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(hsbcUSStock)]));
+    });
+
+
+    it("should not extract 00005.HK Stock from 'HSBC stock price' in US", async() => {
+        const result = await extractTickers("HSBC stock price", "US");
+        expect(result).not.toEqual(expect.arrayContaining([expect.objectContaining(hsbc0005HKStock)]));
+    });
+
+    it("should extract 0005.HK HK Stock from 'HSBC stock price' in HK", async() => {
+        const result = await extractTickers("HSBC stock price", "HK");
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(hsbc0005HKStock)]));
+    });
+
+    it("should not extract HSBC US Stock from 'HSBC stock price' in HK", async() => {
+        const result = await extractTickers("HSBC stock price", "HK");
+        expect(result).not.toEqual(expect.arrayContaining([expect.objectContaining(hsbcUSStock)]));
+    });
+
+    it("should extract Micosft US Stock from 'Micorsft stock' (example of typo) in US", async() => {
+        const result = await extractTickers("Micorsft stock", "US");
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "MSFT" })]));
     });
 
 
 
     it("should extract Apple from 'Apple stock price'", async() => {
         const result = await extractTickers("Apple stock price", "US");
-        expect.objectContaining(appleStock);
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
     });
 
     it("should extract AAPL from 'find me $AAPL stock price'", async() => {
         const result = await extractTickers("find me $AAPL stock price", "US");
-        expect.objectContaining(appleStock);
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
     });
 
     it("should extract AAPL from 'find me Apple stock price'", async() => {
         const result = await extractTickers("find me Apple stock price", "US");
-        expect.objectContaining(appleStock);
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
     });
 
     it("should extract multiple stock tickers from text with company names", async() => {
         const text = "find me Apple stock and Pineapple stock";
         const result = await extractTickers(text, "US");
-        expect.objectContaining(appleStock)
-        expect.objectContaining(pineappleStock)
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining(pineappleStock)]));
     });
 
-    it("should extract Alibaba stock with 'Alibaba stock price'", async() => {
-        const result = await extractTickers("Alibaba stock price", "HK");
-        expect.objectContaining(alibaba9988HKStock)
-    });
+  
 })
