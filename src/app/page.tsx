@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { ParsedResult, Stock, SupportedLanguage } from '@/types';
-import { MarketLocation } from '@/types/market';
 
 export default function Home() {
   const [userQuery, setUserQuery] = useState('');
   const [parsedResult, setparsedResult] = useState<ParsedResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [location, setLocation] = useState(MarketLocation.GLOBAL);
+  const [location, setLocation] = useState("GLOBAL");
   const [language, setLanguage] = useState<SupportedLanguage>('en');
 
   useEffect(() => {

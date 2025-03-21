@@ -132,8 +132,15 @@ export class TickerExtractorService {
     
     console.log(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${queryText}"`);
     
-    // Create an array of promises for parallel processing
-    const fuzzyMatchPromises = entities.map(async entity => {
+    // Filter out entities that have direct matches
+    const entitiesToFuzzyMatch = entities.filter(entity => {
+        const stockInfo = this.stockInfoMap.get(entity.toUpperCase());
+        const hasDirectMatch = stockInfo && this.stockMatchesLocation(stockInfo, location);
+        console.log(`[TickerExtractorService] findFuzzyMatches() - Entity "${entity}" ${hasDirectMatch ? 'has direct match, skipping fuzzy' : 'needs fuzzy matching'}`);
+        return !hasDirectMatch;
+    });
+
+    const fuzzyMatchPromises = entitiesToFuzzyMatch.map(async entity => {
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
       // Pass the full original query to provide context for market detection
       const matchResults = await searchStocks(entity, location, selectedLanguage, queryText);

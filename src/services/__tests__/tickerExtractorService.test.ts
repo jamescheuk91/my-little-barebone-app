@@ -137,6 +137,13 @@ describe("TickerExtractorService", () => {
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "TSLA" })]));
     });
 
+    it("should skip fuzzy matching for directly matched symbols", async() => {
+        // NVDA is a direct symbol match so it shouldn't go through fuzzy matching
+        const text = "NVDA stock price";
+        const result = await extractTickers(text, MarketLocation.GLOBAL, defaultLanguage);
+        expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "NVDA", _directSymbolMatch: true })]));
+        expect(result.length).toBe(1); // Should only return the direct match
+    });
 
     
 });
