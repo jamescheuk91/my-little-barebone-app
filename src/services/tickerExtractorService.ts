@@ -82,7 +82,7 @@ export class TickerExtractorService {
         const stockInfo = this.stockInfoMap.get(entity.toUpperCase());
         if (stockInfo) {
           // If global, ignore location filtering
-          if (location === 'global') {
+          if (location === 'GLOBAL') {
             console.log(`[TickerExtractorService] extractTickers() - Direct match found for "${entity}": ${JSON.stringify(stockInfo)}`);
             directMatches.push(stockInfo);
           } else {

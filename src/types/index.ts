@@ -43,12 +43,12 @@ export interface ParsedResult {
 
 /**
  * Supported market locations for stock searches
- * global: Search across all markets
+ * GLOBAL: Search across all markets
  * US: United States markets (NYSE, NASDAQ, etc.)
  * HK: Hong Kong market (HKSE)
  * CN: Chinese markets (Shanghai, Shenzhen)
  */
-export type SupportedLocation = 'global' | 'US' | 'HK' | 'CN';
+export type SupportedLocation = 'GLOBAL' | 'US' | 'HK' | 'CN';
 
 /**
  * Interface representing stock information used internally by the parser

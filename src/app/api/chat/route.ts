@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
     // Extract location from query parameters or default to global
     const { searchParams } = new URL(request.url);
     const locationParam = searchParams.get('location');
-    // Make sure location is one of the supported values, default to 'global'
+    // Make sure location is one of the supported values, default to 'GLOBAL'
     const location: SupportedLocation = 
-      (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'global') 
+      (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'GLOBAL') 
         ? locationParam as SupportedLocation 
-        : 'global';
+        : 'GLOBAL';
     console.log("selectedLocation: ", location);
     // Find stock tickers in the translated text
     

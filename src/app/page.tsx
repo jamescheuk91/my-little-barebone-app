@@ -8,7 +8,7 @@ export default function Home() {
   const [parsedResult, setparsedResult] = useState<ParsedResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [location, setLocation] = useState('global');
+  const [location, setLocation] = useState('GLOBAL');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserQuery(e.target.value);

@@ -44,6 +44,10 @@ cp .env.example .env.local
 ## Testing
 
 ```
+npm run test
+```
+
+```
 NODE_OPTIONS="--experimental-vm-modules" npm run test -- --detectOpenHandles
 ```
 
