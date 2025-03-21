@@ -1,6 +1,6 @@
 import { findEntities } from './NLPEntityService';
 import { getStockList } from './StockDataService';
-import { Stock, SupportedLocation } from '@/types';
+import { SupportedLanguage, Stock, SupportedLocation } from '@/types';
 import { searchStocks } from './StockFuzeMatchingService';
 
 // Define mapping of exchanges by location for cleaner code
@@ -112,7 +112,7 @@ export class TickerExtractorService {
    * @param location The location to filter by
    * @returns An array of stocks that fuzzy match the entities
    */
-  private async findFuzzyMatches(entities: string[], location: SupportedLocation): Promise<Stock[]> {
+  private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
     console.log('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
     
     // Create an array of promises for parallel processing
@@ -160,10 +160,10 @@ export class TickerExtractorService {
    * @param location The location to filter by
    * @returns An array of extracted stocks
    */
-  async extractTickers(text: string, location: SupportedLocation): Promise<Stock[]> {
-    console.log(`[TickerExtractorService] extractTickers() - Starting with text: "${text}", location: ${location}`);
+  async extractTickers(text: string, selectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
+    console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${text}", selectedLocation: ${selectedLocation}`);
     
-    if (!text || text.trim() === '') {
+    if (!text || text.trim() === '') {  
       console.log('[TickerExtractorService] extractTickers() - Empty text provided, returning empty array');
       return [];
     }
@@ -187,11 +187,11 @@ export class TickerExtractorService {
       }
       
       // Find direct matches
-      const directMatches = this.findDirectMatches(entities, location);
+      const directMatches = this.findDirectMatches(entities, selectedLocation);
       console.log(`[TickerExtractorService] extractTickers() - Direct matches: ${directMatches.length}`);
       
       // Find fuzzy matches
-      const fuzzyMatches = await this.findFuzzyMatches(entities, location);
+      const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage);
       console.log(`[TickerExtractorService] extractTickers() - Total fuzzy matches: ${fuzzyMatches.length}`);
       
       // Combine and deduplicate matches
@@ -215,9 +215,9 @@ const tickerExtractorService = new TickerExtractorService();
  * @param location The location to filter by
  * @returns An array of extracted stocks
  */
-export const extractTickers = async (text: string, location: SupportedLocation): Promise<Stock[]> => {
-  console.log(`[extractTickers] Wrapper function called with text: "${text}", location: ${location}`);
-  const result = await tickerExtractorService.extractTickers(text, location);
+export const extractTickers = async (text: string, selectedlocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> => {
+  console.log(`[extractTickers] Wrapper function called with text: "${text}", selectedlocation: ${selectedlocation}, selectedLanguage: ${selectedLanguage}`);
+  const result = await tickerExtractorService.extractTickers(text, selectedlocation, selectedLanguage);
   console.log(`[extractTickers] Wrapper function returning ${result.length} results`);
   return result;
 };

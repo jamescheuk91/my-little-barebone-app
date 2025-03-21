@@ -1,4 +1,4 @@
-import { Language, TranslationRequest, TranslationResponse } from '@/types';
+import { SupportedLanguage, TranslationRequest, TranslationResponse } from '@/types';
 import { v2 } from '@google-cloud/translate';
 import getConfig from 'next/config';
 
@@ -43,7 +43,7 @@ const getTranslateClient = (): v2.Translate => {
  */
 export async function translateText(
   text: string,
-  targetLanguage: Language
+  targetLanguage: SupportedLanguage
 ): Promise<TranslationResponse> {
   try {
     const translateClient = getTranslateClient();

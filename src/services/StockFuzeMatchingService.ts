@@ -1,6 +1,6 @@
 import Fuse, { FuseResult } from "fuse.js";
 import { getStockList } from "./StockDataService";
-import { Stock, SupportedLocation } from "@/types";
+import { Stock, SupportedLanguage, SupportedLocation } from "@/types";
 
 // Define a type for the search result that includes the score
 export interface StockSearchResult {
@@ -100,7 +100,7 @@ export class StockFuzeMatchingService {
     }
   }
 
-  search(query: string, location: SupportedLocation): Promise<StockSearchResult | null> {
+  search(query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult | null> {
     console.log(`[StockFuzeMatchingService] search() - Starting with query: "${query}", location: "${location}"`);
     
     return new Promise((resolve, reject) => {
@@ -148,10 +148,10 @@ export class StockFuzeMatchingService {
 
 export const stockFuzeMatchingService = new StockFuzeMatchingService();
 
-export const searchStocks = async (query: string, location: SupportedLocation): Promise<StockSearchResult[]> => {
+export const searchStocks = async (query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult[]> => {
   console.log(`[searchStocks] Wrapper function called with query: "${query}", location: "${location}"`);
   try {
-    const result = await stockFuzeMatchingService.search(query, location);
+    const result = await stockFuzeMatchingService.search(query, location, selectedLanguage);
     console.log(`[searchStocks] Wrapper function returning ${result ? 'one result' : 'no results'}`);
     return result ? [result] : [];
   } catch (error) {

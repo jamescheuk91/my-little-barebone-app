@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SupportedLocation } from '@/types';
+import { SupportedLanguage, SupportedLocation } from '@/types';
 import { ChatRequest, ParsedResult, Stock } from '@/types';
 import { processTranslation } from '@/services/translationService';
 // import { getStockList } from '@/services/StockDataService';
@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    const { searchParams } = new URL(request.url);
+    const selectedLanguage = searchParams.get('language') as SupportedLanguage;
     // Create chat request with fixed target language "en"
     const chatRequest: ChatRequest = {
       text: body.text,
@@ -33,17 +35,16 @@ export async function POST(request: NextRequest) {
     console.debug("translationResult: ", translationResult);
 
     // Extract location from query parameters or default to global
-    const { searchParams } = new URL(request.url);
     const locationParam = searchParams.get('location');
     // Make sure location is one of the supported values, default to 'GLOBAL'
-    const location: SupportedLocation = 
+    const selectedLocation: SupportedLocation = 
       (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'GLOBAL') 
         ? locationParam as SupportedLocation 
         : 'GLOBAL';
-    console.log("selectedLocation: ", location);
+    console.debug("selectedLocation: ", selectedLocation);
     // Find stock tickers in the translated text
     
-    const stocks: Stock[] = await extractTickers(translationResult.translatedText, location);
+    const stocks: Stock[] = await extractTickers(translationResult.translatedText, selectedLocation, selectedLanguage);
     
     
     // Create response with proper format

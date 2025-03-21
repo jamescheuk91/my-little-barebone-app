@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ParsedResult, Stock } from '@/types';
+import { ParsedResult, Stock, SupportedLanguage } from '@/types';
 
 export default function Home() {
   const [userQuery, setUserQuery] = useState('');
@@ -9,11 +9,17 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [location, setLocation] = useState('GLOBAL');
+  const [language, setLanguage] = useState<SupportedLanguage>('en');
 
   useEffect(() => {
     const savedLocation = localStorage.getItem('marketLocation');
     if (savedLocation) {
       setLocation(savedLocation);
+    }
+    
+    const savedLanguage = localStorage.getItem('language');
+    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'zh-CN' || savedLanguage === 'zh-TW')) {
+      setLanguage(savedLanguage as SupportedLanguage);
     }
   }, []);
 
@@ -33,6 +39,12 @@ export default function Home() {
     setLocation(newLocation);
     localStorage.setItem('marketLocation', newLocation);
   };
+  
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLanguage = e.target.value as SupportedLanguage;
+    setLanguage(newLanguage);
+    localStorage.setItem('language', newLanguage);
+  };
 
   const handleSubmit = async () => {
     if (!userQuery.trim()) {
@@ -45,8 +57,8 @@ export default function Home() {
     setparsedResult(null);
     
     try {
-      // Call the API endpoint with location parameter
-      const response = await fetch(`/api/chat?location=${location}`, {
+      // Call the API endpoint with location and language parameters
+      const response = await fetch(`/api/chat?location=${location}&language=${language}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,21 +106,38 @@ export default function Home() {
               <label htmlFor="query-input" className="block text-sm font-medium text-gray-700">
                 Enter your query
               </label>
-              <div className="flex items-center space-x-2">
-                <label htmlFor="location-select" className="text-sm text-gray-600">
-                  Market:
-                </label>
-                <select
-                  id="location-select"
-                  value={location}
-                  onChange={handleLocationChange}
-                  className="text-sm border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value="global">Global</option>
-                  <option value="US">US</option>
-                  <option value="HK">Hong Kong</option>
-                  <option value="CN">China</option>
-                </select>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="location-select" className="text-sm text-gray-600">
+                    Market:
+                  </label>
+                  <select
+                    id="location-select"
+                    value={location}
+                    onChange={handleLocationChange}
+                    className="text-sm border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value="GLOBAL">Global</option>
+                    <option value="US">US</option>
+                    <option value="HK">Hong Kong</option>
+                    <option value="CN">China</option>
+                  </select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="language-select" className="text-sm text-gray-600">
+                    Language:
+                  </label>
+                  <select
+                    id="language-select"
+                    value={language}
+                    onChange={handleLanguageChange}
+                    className="text-sm border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value="en">English</option>
+                    <option value="zh-CN">简体中文</option>
+                    <option value="zh-TW">繁體中文</option>
+                  </select>
+                </div>
               </div>
             </div>
             

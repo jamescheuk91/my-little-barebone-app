@@ -1,13 +1,19 @@
-export type Language = 'en'
+/**
+ * Supported languages for translation and chat functionality
+ * en: English
+ * zh-CN: Simplified Chinese
+ * zh-TW: Traditional Chinese
+ */
+export type SupportedLanguage = 'en' | 'zh-CN' | 'zh-TW'
 
 export interface ChatRequest {
   text: string;
-  targetLanguage: Language;
+  targetLanguage: SupportedLanguage;
 }
 
 export interface TranslationRequest {
   text: string;
-  targetLanguage: Language;
+  targetLanguage: SupportedLanguage;
 }
 
 export interface TranslationResponse {
