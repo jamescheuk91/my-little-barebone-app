@@ -15,19 +15,19 @@ export class StockFuzeMatchingService {
   private isInitialized = false;
 
   constructor() {
-    console.log('[StockFuzeMatchingService] Constructor called - Creating new instance');
+    console.debug('[StockFuzeMatchingService] Constructor called - Creating new instance');
     this.initialize();
   }
 
   private async initialize() {
-    console.log('[StockFuzeMatchingService] initialize() - Starting initialization');
+    console.debug('[StockFuzeMatchingService] initialize() - Starting initialization');
     try {
-      console.log('[StockFuzeMatchingService] initialize() - Fetching stock list from StockDataService');
+      console.debug('[StockFuzeMatchingService] initialize() - Fetching stock list from StockDataService');
       const stockList = await getStockList();
-      console.log(`[StockFuzeMatchingService] initialize() - Received ${stockList.length} stocks from StockDataService`);
+      console.debug(`[StockFuzeMatchingService] initialize() - Received ${stockList.length} stocks from StockDataService`);
       
       // Global index (all stocks)
-      console.log('[StockFuzeMatchingService] initialize() - Creating global Fuse index for all stocks');
+      console.debug('[StockFuzeMatchingService] initialize() - Creating global Fuse index for all stocks');
       const fuzeIndexOptions = {
         keys: ["name", "symbol"],         // Search in both name and symbol
         threshold: 0.6,                   // Very high to catch severe typos like "Micorsft"
@@ -43,44 +43,44 @@ export class StockFuzeMatchingService {
       this.stockCounts.set(MarketLocation.GLOBAL, stockList.length);
       
       // US stocks index (NYSE, NASDAQ, etc.)
-      console.log('[StockFuzeMatchingService] initialize() - Filtering US stocks');
+      console.debug('[StockFuzeMatchingService] initialize() - Filtering US stocks');
       const usStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase()
         return exchange && [Exchange.NYSE, Exchange.NASDAQ, Exchange.AMEX].includes(exchange as Exchange);
       });
 
-      console.log(`[StockFuzeMatchingService] initialize() - Creating US Fuse index with ${usStocks.length} stocks`);
+      console.debug(`[StockFuzeMatchingService] initialize() - Creating US Fuse index with ${usStocks.length} stocks`);
       this.fuseIndices.set(MarketLocation.US, new Fuse(usStocks, fuzeIndexOptions));
       this.stockCounts.set(MarketLocation.US, usStocks.length);
       
       // CN stocks index (SHH , SHZ)
-      console.log('[StockFuzeMatchingService] initialize() - Filtering CN stocks');
+      console.debug('[StockFuzeMatchingService] initialize() - Filtering CN stocks');
       const cnStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase();
         return exchange && [Exchange.SHH, Exchange.SHZ].includes(exchange as Exchange);
       });
       
-      console.log(`[StockFuzeMatchingService] initialize() - Creating CN Fuse index with ${cnStocks.length} stocks`);
+      console.debug(`[StockFuzeMatchingService] initialize() - Creating CN Fuse index with ${cnStocks.length} stocks`);
       this.fuseIndices.set(MarketLocation.CN, new Fuse(cnStocks, fuzeIndexOptions));
       this.stockCounts.set(MarketLocation.CN, cnStocks.length);
       
       // HK stocks index (Hong Kong)
-      console.log('[StockFuzeMatchingService] initialize() - Filtering HK stocks');
+      console.debug('[StockFuzeMatchingService] initialize() create - Filtering HK stocks');
       const hkStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase();
         return exchange === Exchange.HKSE;
       });
       
-      console.log(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
+      console.debug(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
       this.fuseIndices.set(MarketLocation.HK, new Fuse(hkStocks, fuzeIndexOptions));
       this.stockCounts.set(MarketLocation.HK, hkStocks.length);
 
       this.isInitialized = true;
-      console.log(`[StockFuzeMatchingService] initialize() - Initialization complete with indices for: ${Array.from(this.fuseIndices.keys()).join(', ')}`);
+      console.debug(`[StockFuzeMatchingService] initialize() - Initialization complete with indices for: ${Array.from(this.fuseIndices.keys()).join(', ')}`);
       
       // Log stock count per index for debugging
       for (const [location, count] of this.stockCounts.entries()) {
-        console.log(`[StockFuzeMatchingService] initialize() - Index "${location}" contains ${count} stocks`);
+        console.debug(`[StockFuzeMatchingService] initialize() - Index "${location}" contains ${count} stocks`);
       }
     } catch (error) {
       console.error('[StockFuzeMatchingService] initialize() - Failed to initialize:', error);
@@ -89,7 +89,7 @@ export class StockFuzeMatchingService {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   search(query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult | null> {
-    console.log(`[StockFuzeMatchingService] search() - Starting with query: "${query}", location: "${location}"`);
+    console.debug(`[StockFuzeMatchingService] search() - Starting with query: "${query}", location: "${location}"`);
     
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -106,23 +106,23 @@ export class StockFuzeMatchingService {
       }
       
       const stockCount = this.stockCounts.get(location) || 0;
-      console.log(`[StockFuzeMatchingService] search() - Searching for '${query}' in location '${location}' with index size: ${stockCount}`);
+      console.debug(`[StockFuzeMatchingService] search() - Searching for '${query}' in location '${location}' with index size: ${stockCount}`);
       
       try {
         const fuzzyStockList: FuseResult<Stock>[] = fuseIndex.search(query);
-        console.log(`[StockFuzeMatchingService] search() - Found ${fuzzyStockList.length} matches for '${query}'`);
+        console.debug(`[StockFuzeMatchingService] search() - Found ${fuzzyStockList.length} matches for '${query}'`);
         
         // Log top matches for debugging
         if (fuzzyStockList.length > 0) {
           const topResults = fuzzyStockList.slice(0, Math.min(3, fuzzyStockList.length));
-          console.log('[StockFuzeMatchingService] search() - Top matches:');
+          console.debug('[StockFuzeMatchingService] search() - Top matches:');
           topResults.forEach((r, i) => {
-            console.log(`[StockFuzeMatchingService] search() - Match #${i+1}: Symbol: ${r.item.symbol}, Name: ${r.item.name}, Score: ${r.score}`);
+            console.debug(`[StockFuzeMatchingService] search() - Match #${i+1}: Symbol: ${r.item.symbol}, Name: ${r.item.name}, Score: ${r.score}`);
           });
           const topMatch = fuzzyStockList.sort((a, b) => (a.score as number) - (b.score as number))[0]; 
           resolve(topMatch);
         } else {
-          console.log(`[StockFuzeMatchingService] search() - No matches found for '${query}'`);
+          console.debug(`[StockFuzeMatchingService] search() - No matches found for '${query}'`);
           resolve(null);
         }
         
@@ -150,26 +150,26 @@ const detectMarketFocus = (queryText: string): SupportedLocation | null => {
   
   // Special case for "company name + Hong Kong" pattern that often indicates HK stocks
   if (normalizedQuery.includes('hong kong')) {
-    console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
+    console.debug(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
     return MarketLocation.HK;
   }
   
   if (hkKeywords.some(keyword => normalizedQuery.includes(keyword))) {
-    console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
+    console.debug(`[detectMarketFocus] Hong Kong market focus detected in: "${queryText}"`);
     return MarketLocation.HK;
   }
   
   // Keywords that indicate China market focus
   const cnKeywords = ['shanghai', 'shenzhen', 'a-share', 'a share', 'china stock', 'china stocks', 'chinese stock', 'chinese stocks', '中国股', '中国股票', 'a股'];
   if (cnKeywords.some(keyword => normalizedQuery.includes(keyword))) {
-    console.log(`[detectMarketFocus] China market focus detected in: "${queryText}"`);
+    console.debug(`[detectMarketFocus] China market focus detected in: "${queryText}"`);
     return MarketLocation.CN;
   }
   
   // Keywords that indicate US market focus
   const usKeywords = ['nasdaq', 'nyse', 'us stock', 'us stocks', 'american stock', 'american stocks', 'wall street', 'us share', 'us shares'];
   if (usKeywords.some(keyword => normalizedQuery.includes(keyword))) {
-    console.log(`[detectMarketFocus] US market focus detected in: "${queryText}"`);
+    console.debug(`[detectMarketFocus] US market focus detected in: "${queryText}"`);
     return MarketLocation.US;
   }
   
@@ -177,7 +177,7 @@ const detectMarketFocus = (queryText: string): SupportedLocation | null => {
 };
 
 export const searchStocks = async (query: string, userSelectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage, queryText?: string): Promise<StockSearchResult[]> => {
-  console.log(`[searchStocks] Wrapper function called with query: "${query}", userSelectedLocation: "${userSelectedLocation}", language: "${selectedLanguage}"`);
+  console.debug(`[searchStocks] Wrapper function called with query: "${query}", userSelectedLocation: "${userSelectedLocation}", language: "${selectedLanguage}"`);
   
   // Determine the optimal search location based on various factors
   let focusedMarketLocation = userSelectedLocation;
@@ -190,7 +190,7 @@ export const searchStocks = async (query: string, userSelectedLocation: Supporte
       // Always use the detected market regardless of user selection
       // This ensures that when a user mentions "Hong Kong" in a query, we search in HK
       focusedMarketLocation = detectedMarket;
-      console.log(`[searchStocks] Market focus detected in query ("${detectedMarket}"). ${userSelectedLocation !== detectedMarket ? `Overriding user selection (${userSelectedLocation}).` : ''} Switching to ${focusedMarketLocation} location for search.`);
+      console.debug(`[searchStocks] Market focus detected in query ("${detectedMarket}"). ${userSelectedLocation !== detectedMarket ? `Overriding user selection (${userSelectedLocation}).` : ''} Switching to ${focusedMarketLocation} location for search.`);
     }
   }
   
@@ -198,31 +198,31 @@ export const searchStocks = async (query: string, userSelectedLocation: Supporte
   if (focusedMarketLocation === 'GLOBAL' && selectedLanguage !== 'en') {
     if (selectedLanguage === 'zh-CN') {
       focusedMarketLocation = MarketLocation.CN;
-      console.log(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
+      console.debug(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
     } else if (selectedLanguage === 'zh-TW') {
       focusedMarketLocation = MarketLocation.HK;
-      console.log(`[searchStocks] Non-English language with global location detected. Switching to HK location for search.`);
+      console.debug(`[searchStocks] Non-English language with global location detected. Switching to HK location for search.`);
     }
   }
   
   try {
     // If we've detected a specific market from the query and it wasn't explicitly selected by the user
     if (focusedMarketLocation !== userSelectedLocation) {
-      console.log(`[searchStocks] First searching in detected market: ${focusedMarketLocation}`);
+      console.debug(`[searchStocks] First searching in detected market: ${focusedMarketLocation}`);
       // Try market-specific search first
       const marketSpecificResult = await stockFuzeMatchingService.search(query, focusedMarketLocation, selectedLanguage);
       if (marketSpecificResult) {
         results.push(marketSpecificResult);
-        console.log(`[searchStocks] Found result in detected market ${focusedMarketLocation} for "${query}": ${marketSpecificResult.item.symbol}`);
+        console.debug(`[searchStocks] Found result in detected market ${focusedMarketLocation} for "${query}": ${marketSpecificResult.item.symbol}`);
       }
       
       // If we didn't find anything in the detected market, fallback to global search
       if (results.length === 0) {
-        console.log(`[searchStocks] No results in detected market. Falling back to user selected location: ${userSelectedLocation}`);
+        console.debug(`[searchStocks] No results in detected market. Falling back to user selected location: ${userSelectedLocation}`);
         const globalResult = await stockFuzeMatchingService.search(query, userSelectedLocation, selectedLanguage);
         if (globalResult) {
           results.push(globalResult);
-          console.log(`[searchStocks] Found fallback result for "${query}": ${globalResult.item.symbol}`);
+          console.debug(`[searchStocks] Found fallback result for "${query}": ${globalResult.item.symbol}`);
         }
       }
     } else {
@@ -230,11 +230,11 @@ export const searchStocks = async (query: string, userSelectedLocation: Supporte
       const result = await stockFuzeMatchingService.search(query, focusedMarketLocation, selectedLanguage);
       if (result) {
         results.push(result);
-        console.log(`[searchStocks] Found result in ${focusedMarketLocation} for "${query}": ${result.item.symbol}`);
+        console.debug(`[searchStocks] Found result in ${focusedMarketLocation} for "${query}": ${result.item.symbol}`);
       }
     }
     
-    console.log(`[searchStocks] Wrapper function returning ${results.length} results`);
+    console.debug(`[searchStocks] Wrapper function returning ${results.length} results`);
     return results;
   } catch (error) {
     console.error(`[searchStocks] Wrapper function error for query "${query}":`, error);
