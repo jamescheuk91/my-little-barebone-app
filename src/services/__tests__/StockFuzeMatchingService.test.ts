@@ -1,6 +1,7 @@
 import {
   StockFuzeMatchingService,
   StockSearchResult,
+  searchStocks,
 } from "../StockFuzeMatchingService";
 import { Stock, SupportedLocation } from "../../types";
 
@@ -186,7 +187,7 @@ describe("StockFuzeMatchingService", () => {
 
   it("should find AAPL with 'Apple' with US", async () => {
     const entity = "Apple";
-    const results = await service.search(entity, "US");
+    const results = await searchStocks(entity, "US");
 
     // The search should return Apple Inc.
     expect(results.length).toBeGreaterThan(0);
