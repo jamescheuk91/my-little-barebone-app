@@ -30,6 +30,8 @@ export interface Stock {
   exchange?: string;
   exchangeShortName?: ExchangeShortName;
   type: string;
+  _directSymbolMatch?: boolean;
+  _matchScore?: number;
 }
 
 export interface StockData {

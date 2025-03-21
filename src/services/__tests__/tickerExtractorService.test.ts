@@ -128,7 +128,7 @@ describe("TickerExtractorService", () => {
     });
 
     it("should extract multiple stock tickers from text with company names and stock tickers", async() => {
-        const text = "GOOGL, GOOGL, GOOGL, Apple, Amazon, Teslaaa";
+        const text = "GOOGL, GOOGL, GOOGL, Apple, Amazon, TSLA";
         const result = await extractTickers(text, MarketLocation.US, defaultLanguage);
 
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining({ symbol: "GOOGL" })]));
@@ -145,5 +145,28 @@ describe("TickerExtractorService", () => {
         expect(result.length).toBe(1); // Should only return the direct match
     });
 
+    it("should extract multiple stock tickers from text with company names and stock tickers", async() => {
+        const text = "try find out the fundments differnce between $TSLA, Amazon,  maybe Jingrui as well";
+        
+        const result = await extractTickers(text, MarketLocation.GLOBAL, defaultLanguage);
+       
+        // Test for TSLA (direct symbol match)
+        const tslaMatch = result.find(stock => stock.symbol === "TSLA");
+        expect(tslaMatch).toBeTruthy();
+        if (tslaMatch) {
+            expect(tslaMatch._directSymbolMatch).toBe(true);
+        }
+
+        // Test for AMZN (company name match)
+        const amznMatch = result.find(stock => stock.symbol === "AMZN");
+        expect(amznMatch).toBeTruthy();
+        if (amznMatch) {
+            expect(amznMatch._directSymbolMatch).toBe(false);
+        }
+
+        // Test for Jingrui (HK stock match)
+        const jingruiMatch = result.find(stock => stock.symbol === "1862.HK");
+        expect(jingruiMatch).toBeTruthy();
+    });
     
 });
