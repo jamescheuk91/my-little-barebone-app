@@ -109,7 +109,7 @@ export class StockFuzeMatchingService {
       console.debug(`[StockFuzeMatchingService] search() - Searching for '${query}' in location '${location}' with index size: ${stockCount}`);
       
       try {
-        const fuzzyStockList: FuseResult<Stock>[] = fuseIndex.search(query);
+        const fuzzyStockList: FuseResult<Stock>[] = fuseIndex.search(query, { limit: 3 });
         console.debug(`[StockFuzeMatchingService] search() - Found ${fuzzyStockList.length} matches for '${query}'`);
         
         // Log top matches for debugging
