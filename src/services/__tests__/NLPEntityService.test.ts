@@ -90,7 +90,7 @@ describe("NLPEntityService", () => {
     });
 
     it("should find entites in longer text", async() => {
-        const text = "Analysts at H.C. Wainwright underscore the potential for FemaSeed to generate additional revenue streams from 2025 onward as Femasys continues to increase the product’s presence and consumer awareness.";
+        const text = "Analysts at H.C. Wainwright underscore the potential for FemaSeed to generate additional revenue streams from 2025 onward as Femasys continues to increase the product's presence and consumer awareness.";
         const result = await findEntities(text);
         expect(result).toContain("Wainwright");
         expect(result).toContain("FemaSeed");
@@ -104,5 +104,47 @@ describe("NLPEntityService", () => {
         expect(result).not.toContain("Hong");
         expect(result).not.toContain("Kong");
         expect(result).not.toContain("stocks");
+    });
+
+    // Tests for handling quoted entities
+    it("should properly handle quoted entities", async() => {
+        const result = await findEntities("\"Hong Alibaba Upward Trend\"");
+        expect(result).toContain("Alibaba");
+        expect(result).not.toContain("Hong");
+        expect(result).not.toContain("Upward");
+        expect(result).not.toContain("Trend");
+    });
+
+    it("should extract entity from quoted text", async() => {
+        const testCases = [
+            { 
+                input: '"Apple" stock price', 
+                expected: ["Apple"]
+            },
+            {
+                input: '"BABA" performance',
+                expected: ["BABA"]
+            }
+        ];
+
+        for (const { input, expected } of testCases) {
+            const entities = await findEntities(input);
+            expect(entities.sort()).toEqual(expected.sort());
+        }
+    });
+    
+    it("should extract Alibaba from 'Hong Alibaba Upward Trend'", async() => {
+        const result = await findEntities('Looking for "Hong Alibaba Upward Trend"');
+        expect(result).toContain("Alibaba");
+        expect(result).not.toContain("Hong");
+        expect(result).not.toContain("Upward");
+        expect(result).not.toContain("Trend");
+        expect(result.length).toEqual(1);
+    });
+    
+    it("should extract only ticker from 'AAPL performance'", async() => {
+        const result = await findEntities("'AAPL' performance");
+        expect(result).toContain("AAPL");
+        expect(result.length).toEqual(1);
     });
 })

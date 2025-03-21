@@ -1,4 +1,5 @@
 import nlp from 'compromise';
+import { trimQuotes } from '@/utils/stringUtils';
 
 /**
  * Extracts noun entities from the given text using the compromise library
@@ -43,7 +44,7 @@ export const findEntities = async (text: string): Promise<string[]> => {
       'Stock', 'Price', 'Compare', 'Find', 'Me', 'On', 'And', 'Thoughts', 'The',
       'for', 'to', 'a', 'an', 'of', 'in', 'with', 'by', 'at', 'from', 'into', 'during',
       'hong', 'kong', 'stocks', 'hong kong', 'hong kong stocks', 'us', 'chinese', 'china',
-      'uptrend', 'downtrend', 'trend'
+      'uptrend', 'downtrend', 'trend', 'performance', 'looking'
     ];
     
     // Extract potential single-word company names
@@ -100,16 +101,23 @@ export const findEntities = async (text: string): Promise<string[]> => {
       'us stock', 'american stock', 'nasdaq', 'nyse', 'wall street'
     ];
     
-    // Remove duplicates, clean up, and filter out unwanted entities
+    // Process and clean each entity, handling quotes and other characters
     const cleanedEntities = [...new Set(extractedEntities)]
-      // Clean entities - remove commas, periods, apostrophes, and $ symbols
-      .map(entity => entity.replace(/[,.'$]/g, '').trim())
+      .map(entity => {
+        // First trim the entity and remove quotes
+        let cleaned = trimQuotes(entity);
+        // Then remove other unnecessary characters
+        cleaned = cleaned.replace(/[,.'$"]/g, '').trim();
+        return cleaned;
+      })
       .filter(entity => 
         entity.length > 1 && 
-        !stopWords.includes(entity) &&
+        !stopWords.includes(entity.toLowerCase()) &&
         !marketTerms.includes(entity.toLowerCase()) &&
         !/stock price/i.test(entity) &&
-        !/find me/i.test(entity)
+        !/find me/i.test(entity) &&
+        !/upward/i.test(entity) &&
+        !/trend/i.test(entity)
       );
     
     // Get simple single-word entities
