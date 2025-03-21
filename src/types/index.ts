@@ -43,7 +43,7 @@ export interface SearchResult {
 
 export interface ParsedResult {
   stocks: Stock[];
-  translatedQuery: string;
+  queryText: string;
   originalQuery?: string;
 }
 

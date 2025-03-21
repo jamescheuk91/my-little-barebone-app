@@ -180,7 +180,7 @@ export default function Home() {
               
               <div>
                 <h3 className="font-medium text-gray-700">Processed Query:</h3>
-                <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{parsedResult.translatedQuery}</p>
+                <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{parsedResult.queryText}</p>
               </div>
               
               <div>

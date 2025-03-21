@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SupportedLanguage, SupportedLocation } from '@/types';
 import { ChatRequest, ParsedResult, Stock } from '@/types';
-import { processTranslation } from '@/services/translationService';
+import { detectLanguage, processTranslation } from '@/services/translationService';
 // import { getStockList } from '@/services/StockDataService';
 // import { searchStocks } from '@/services/StockFuzeMatchingService';
 import { extractTickers } from '@/services/tickerExtractorService';
@@ -29,33 +29,43 @@ export async function POST(request: NextRequest) {
       (languageParam === 'en' || languageParam === 'zh-CN' || languageParam === 'zh-TW') 
         ? languageParam as SupportedLanguage 
         : 'en';
-    // Create chat request with fixed target language "en"
-    const chatRequest: ChatRequest = {
-      text: body.text,
-      targetLanguage: 'en' // Always translate to English
-    };
-    
-    // Process the translation
-    const translationResult = await processTranslation(chatRequest);
-    console.debug("translationResult: ", translationResult);
-
+  
     // Extract location from query parameters or default to global
     const locationParam = searchParams.get('location');
     // Make sure location is one of the supported values, default to 'GLOBAL'
     const selectedLocation: SupportedLocation = 
-      (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'GLOBAL') 
-        ? locationParam as SupportedLocation 
-        : 'GLOBAL';
-    console.debug("selectedLocation: ", selectedLocation);
+    (locationParam === 'US' || locationParam === 'HK' || locationParam === 'CN' || locationParam === 'GLOBAL') 
+      ? locationParam as SupportedLocation 
+      : 'GLOBAL';
+
+  console.debug("selectedLocation: ", selectedLocation);
+   
+    const deletedLanguage = await detectLanguage(body.text);
+    console.debug("deletedLanguage: ", deletedLanguage);
+    let queryText: string;
+    if (deletedLanguage !== 'en') { 
+      // Create chat request with fixed target language "en"
+      const chatRequest: ChatRequest = {
+        text: body.text,
+        targetLanguage: 'en' // Always translate to English
+     };
+      // Process the translation
+      const translationResult = await processTranslation(chatRequest);
+      console.debug("translationResult: ", translationResult);
+      queryText = translationResult.translatedText;
+    } else {
+      queryText = body.text;
+    }
+   
     // Find stock tickers in the translated text
-    console.debug(`Searching for tickers in: "${translationResult.translatedText}"`);
-    const stocks: Stock[] = await extractTickers(translationResult.translatedText, selectedLocation, selectedLanguage);
+    console.debug(`Searching for tickers in: "${queryText}"`);
+    const stocks: Stock[] = await extractTickers(queryText, selectedLocation, selectedLanguage);
     
     
     // Create response with proper format
     const result: ParsedResult = {
-      originalQuery: translationResult.originalText,
-      translatedQuery: translationResult.translatedText,
+      originalQuery: body.text,
+      queryText: queryText,
       stocks: stocks
     };
 

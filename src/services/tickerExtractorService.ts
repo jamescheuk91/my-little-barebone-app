@@ -126,16 +126,16 @@ export class TickerExtractorService {
    * @param location The location to filter by
    * @returns An array of stocks that fuzzy match the entities
    */
-  private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage, translatedQuery: string): Promise<Stock[]> {
+  private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage, queryText: string): Promise<Stock[]> {
     console.log('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
     
-    console.log(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${translatedQuery}"`);
+    console.log(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${queryText}"`);
     
     // Create an array of promises for parallel processing
     const fuzzyMatchPromises = entities.map(async entity => {
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
       // Pass the full original query to provide context for market detection
-      const matchResults = await searchStocks(entity, location, selectedLanguage, translatedQuery);
+      const matchResults = await searchStocks(entity, location, selectedLanguage, queryText);
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
       
       if (matchResults.length > 0) {
@@ -271,15 +271,15 @@ export class TickerExtractorService {
   
   /**
    * Extracts stock tickers from the input text
-   * @param translatedQuery The input text to extract tickers from
+   * @param queryText The input text to extract tickers from
    * @param location The location to filter by
    * @returns An array of extracted stocks
    */
-  async extractTickers(translatedQuery: string, selectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
-    console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${translatedQuery}", selectedLocation: ${selectedLocation}`);
+  async extractTickers(queryText: string, selectedLocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
+    console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${queryText}", selectedLocation: ${selectedLocation}`);
     
-    if (!translatedQuery || translatedQuery.trim() === '') {  
-      console.log('[TickerExtractorService] extractTickers() - Empty translatedQuery provided, returning empty array');
+    if (!queryText || queryText.trim() === '') {  
+      console.log('[TickerExtractorService] extractTickers() - Empty queryText provided, returning empty array');
       return [];
     }
     
@@ -292,9 +292,9 @@ export class TickerExtractorService {
         console.log(`[TickerExtractorService] extractTickers() - StockInfoMap already contains ${this.stockInfoMap.size} entries`);
       }
       
-      // Extract entities from translatedQuery
+      // Extract entities from queryText
       console.log('[TickerExtractorService] extractTickers() - Calling findEntities to extract potential entities');
-      const entities = await findEntities(translatedQuery);
+      const entities = await findEntities(queryText);
       console.log(`[TickerExtractorService] extractTickers() - Found ${entities.length} entities: ${JSON.stringify(entities)}`);
       
       if (entities.length === 0) {
@@ -306,7 +306,7 @@ export class TickerExtractorService {
       console.log(`[TickerExtractorService] extractTickers() - Direct matches: ${directMatches.length}`);
       
       // Find fuzzy matches
-      const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage, translatedQuery);
+      const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage, queryText);
       console.log(`[TickerExtractorService] extractTickers() - Total fuzzy matches: ${fuzzyMatches.length}`);
       
       // Combine and deduplicate matches

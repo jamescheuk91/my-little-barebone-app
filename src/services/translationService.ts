@@ -59,6 +59,19 @@ export async function translateText(
   }
 }
 
+export async function detectLanguage(text: string): Promise<SupportedLanguage> {
+  try {
+    const translateClient = getTranslateClient();
+    const [detection] = await translateClient.detect(text);
+
+    return detection.language as SupportedLanguage;
+  }
+  catch (error) {
+    console.error('Language detection error:', error);
+    throw new Error(`Failed to detect language: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 /**
  * Processes a translation request
  * @param request The translation request object
