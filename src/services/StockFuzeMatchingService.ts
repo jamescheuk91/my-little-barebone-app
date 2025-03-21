@@ -40,7 +40,7 @@ export class StockFuzeMatchingService {
       // US stocks index (NYSE, NASDAQ, etc.)
       console.log('[StockFuzeMatchingService] initialize() - Filtering US stocks');
       const usStocks = stockList.filter(stock => {
-        const exchange = stock.exchangeShortName?.toUpperCase() || stock.exchange?.toUpperCase();
+        const exchange = stock.exchangeShortName?.toUpperCase()
         return exchange && ["NYSE", "NASDAQ", "AMEX", "OTC"].includes(exchange);
       });
 
@@ -78,7 +78,7 @@ export class StockFuzeMatchingService {
       console.log('[StockFuzeMatchingService] initialize() - Filtering HK stocks');
       const hkStocks = stockList.filter(stock => {
         const exchange = stock.exchangeShortName?.toUpperCase();
-        return exchange === "HKSE ";
+        return exchange === "HKSE";
       });
       
       console.log(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
