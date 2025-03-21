@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ParsedResult, Stock } from '@/types';
 
 export default function Home() {
@@ -9,6 +9,13 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [location, setLocation] = useState('GLOBAL');
+
+  useEffect(() => {
+    const savedLocation = localStorage.getItem('marketLocation');
+    if (savedLocation) {
+      setLocation(savedLocation);
+    }
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserQuery(e.target.value);
@@ -22,7 +29,9 @@ export default function Home() {
   };
   
   const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLocation(e.target.value);
+    const newLocation = e.target.value;
+    setLocation(newLocation);
+    localStorage.setItem('marketLocation', newLocation);
   };
 
   const handleSubmit = async () => {

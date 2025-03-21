@@ -101,7 +101,6 @@ describe("TickerExtractorService", () => {
     });
 
 
-
     it("should extract Apple from 'Apple stock price'", async() => {
         const result = await extractTickers("Apple stock price", "US");
         expect(result).toEqual(expect.arrayContaining([expect.objectContaining(appleStock)]));
