@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SupportedLocation } from '@/types';
 import { ChatRequest, ParsedResult, Stock } from '@/types';
 import { processTranslation } from '@/services/translationService';
-import { findStockTickers } from '@/services/trickerExtractorService';
-import { getStockList } from '@/services/stockDataService';
+// import { getStockList } from '@/services/StockDataService';
+// import { searchStocks } from '@/services/StockFuzeMatchingService';
+import { extractTickers } from '@/services/tickerExtractorService';
+
 /**
  * API handler for chat requests
  * POST /api/chat
@@ -28,10 +30,8 @@ export async function POST(request: NextRequest) {
     
     // Process the translation
     const translationResult = await processTranslation(chatRequest);
-    
-    // Get stock list data
-    const stockList = await getStockList();
-    
+    console.debug("translationResult: ", translationResult);
+
     // Extract location from query parameters or default to global
     const { searchParams } = new URL(request.url);
     const locationParam = searchParams.get('location');
@@ -42,26 +42,15 @@ export async function POST(request: NextRequest) {
         : 'global';
     console.log("selectedLocation: ", location);
     // Find stock tickers in the translated text
-    const tickers = findStockTickers(
-      translationResult.translatedText,
-      stockList,
-      location,
-      0.3,  // Default confidence threshold
-      5     // Default max results
-    );
     
-    // Map tickers to full stock objects with proper type assertion
-    const stocks = tickers
-      .map(ticker => stockList.find(stock => stock.symbol === ticker))
-      .filter((stock): stock is Stock => stock !== undefined);
+    const stocks: Stock[] = await extractTickers(translationResult.translatedText, location);
+    
     
     // Create response with proper format
     const result: ParsedResult = {
-      stocks,
-      query: translationResult.translatedText,
-      originalQuery: translationResult.translatedText !== translationResult.originalText 
-        ? translationResult.originalText 
-        : undefined
+      originalQuery: translationResult.originalText,
+      translatedQuery: translationResult.translatedText,
+      stocks: stocks
     };
 
     // Return the result

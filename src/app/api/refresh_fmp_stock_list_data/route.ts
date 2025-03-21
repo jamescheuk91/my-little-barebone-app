@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateStockCache } from '@/services/stockDataService';
+import { updateStockCache } from '@/services/StockDataService';
 
 /**
  * API handler for refreshing FMP stock list data

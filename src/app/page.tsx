@@ -5,7 +5,7 @@ import { ParsedResult, Stock } from '@/types';
 
 export default function Home() {
   const [userQuery, setUserQuery] = useState('');
-  const [queryResult, setQueryResult] = useState<ParsedResult | null>(null);
+  const [parsedResult, setparsedResult] = useState<ParsedResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [location, setLocation] = useState('global');
@@ -33,7 +33,7 @@ export default function Home() {
     
     setIsLoading(true);
     setError('');
-    setQueryResult(null);
+    setparsedResult(null);
     
     try {
       // Call the API endpoint with location parameter
@@ -53,7 +53,7 @@ export default function Home() {
       }
       
       const result = await response.json();
-      setQueryResult(result);
+      setparsedResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -131,27 +131,27 @@ export default function Home() {
             </div>
           </div>
           
-          {queryResult && (
+          {parsedResult && (
             <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-              {queryResult.originalQuery && (
+              {parsedResult.originalQuery && (
                 <div>
                   <h3 className="font-medium text-gray-500">Original Text:</h3>
-                  <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{queryResult.originalQuery}</p>
+                  <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{parsedResult.originalQuery}</p>
                 </div>
               )}
               
               <div>
                 <h3 className="font-medium text-gray-700">Processed Query:</h3>
-                <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{queryResult.query}</p>
+                <p className="mt-1 p-2 bg-white border border-gray-200 rounded">{parsedResult.translatedQuery}</p>
               </div>
               
               <div>
                 <h3 className="font-medium text-gray-700">
-                  Extracted Stocks ({queryResult.stocks.length}):
+                  Extracted Stocks ({parsedResult.stocks.length}):
                 </h3>
-                {queryResult.stocks.length > 0 ? (
+                {parsedResult.stocks.length > 0 ? (
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {queryResult.stocks.map(renderStockInfo)}
+                    {parsedResult.stocks.map(renderStockInfo)}
                   </div>
                 ) : (
                   <p className="mt-1 italic text-gray-500">No stocks found in the query.</p>
