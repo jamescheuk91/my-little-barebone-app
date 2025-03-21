@@ -158,21 +158,21 @@ const detectMarketFocus = (translatedQuery: string): SupportedLocation | null =>
   const normalizedQuery = translatedQuery.toLowerCase();
   
   // Keywords that indicate Hong Kong market focus
-  const hkKeywords = ['hong kong', 'hk stock', 'hong kong stock', '港股', 'hkse', 'hkex'];
+  const hkKeywords = ['hong kong', 'hk stock', 'hong kong stock', 'hong kong stocks', '港股', 'hkse', 'hkex'];
   if (hkKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${translatedQuery}"`);
     return 'HK';
   }
   
   // Keywords that indicate China market focus
-  const cnKeywords = ['shanghai', 'shenzhen', 'a-share', 'a share', 'china stock', 'chinese stock', '中国股', '中国股票', 'a股'];
+  const cnKeywords = ['shanghai', 'shenzhen', 'a-share', 'a share', 'china stock', 'china stocks', 'chinese stock', 'chinese stocks', '中国股', '中国股票', 'a股'];
   if (cnKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] China market focus detected in: "${translatedQuery}"`);
     return 'CN';
   }
   
   // Keywords that indicate US market focus
-  const usKeywords = ['nasdaq', 'nyse', 'us stock', 'american stock', 'wall street', 'us share'];
+  const usKeywords = ['nasdaq', 'nyse', 'us stock', 'us stocks', 'american stock', 'american stocks', 'wall street', 'us share', 'us shares'];
   if (usKeywords.some(keyword => normalizedQuery.includes(keyword))) {
     console.log(`[detectMarketFocus] US market focus detected in: "${translatedQuery}"`);
     return 'US';

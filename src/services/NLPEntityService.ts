@@ -41,7 +41,9 @@ export const findEntities = async (text: string): Promise<string[]> => {
     const stopWords = [
       'stock', 'price', 'compare', 'find', 'me', 'on', 'and', 'thoughts', 'the',
       'Stock', 'Price', 'Compare', 'Find', 'Me', 'On', 'And', 'Thoughts', 'The',
-      'for', 'to', 'a', 'an', 'of', 'in', 'with', 'by', 'at', 'from', 'into', 'during'
+      'for', 'to', 'a', 'an', 'of', 'in', 'with', 'by', 'at', 'from', 'into', 'during',
+      'hong', 'kong', 'stocks', 'hong kong', 'hong kong stocks', 'us', 'chinese', 'china',
+      'uptrend', 'downtrend', 'trend'
     ];
     
     // Extract potential single-word company names
@@ -91,6 +93,13 @@ export const findEntities = async (text: string): Promise<string[]> => {
       ...companyNameCandidates
     ];
     
+    // Detect and exclude market-related terms
+    const marketTerms = [
+      'hong kong', 'hong kong stocks', 'hk stock', 'hkse', 'hong', 'kong',
+      'shanghai', 'shenzhen', 'china stock', 'chinese stock', 'a-share', 'a share',
+      'us stock', 'american stock', 'nasdaq', 'nyse', 'wall street'
+    ];
+    
     // Remove duplicates, clean up, and filter out unwanted entities
     const cleanedEntities = [...new Set(extractedEntities)]
       // Clean entities - remove commas, periods, apostrophes, and $ symbols
@@ -98,6 +107,7 @@ export const findEntities = async (text: string): Promise<string[]> => {
       .filter(entity => 
         entity.length > 1 && 
         !stopWords.includes(entity) &&
+        !marketTerms.includes(entity.toLowerCase()) &&
         !/stock price/i.test(entity) &&
         !/find me/i.test(entity)
       );

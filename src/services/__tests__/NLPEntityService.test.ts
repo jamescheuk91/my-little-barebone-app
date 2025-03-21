@@ -19,6 +19,16 @@ describe("NLPEntityService", () => {
         expect(result).toEqual(["Apple"]);
     })
 
+    it("should find Alibaba 'Hong Kong stocks Alibaba uptrend'" , async() => {
+        const result = await findEntities("Hong Kong stocks Alibaba uptrend");
+        expect(result).toContain("Alibaba");
+        expect(result).not.toContain("Hong");
+        expect(result).not.toContain("Kong");
+        expect(result).not.toContain("stocks");
+        expect(result).not.toContain("uptrend");
+    })
+
+
     it("should find Alibaba in 'Alibaba stock price'", async() => {
         const result = await findEntities("Alibaba stock price");
         expect(result).toEqual(["Alibaba"]);
@@ -61,7 +71,7 @@ describe("NLPEntityService", () => {
     it("should find 'BABA' and 'NVDA' in 'compare BABA and NVDA'", async() => {
         const result = await findEntities("compare BABA and NVDA");
         expect(result).toEqual(["BABA", "NVDA"]);
-    })
+    });
 
     it("should find 'BABA' and 'NVDA' in 'compare BABA Apple google and NVDA'", async() => {
         const result = await findEntities("compare BABA Apple google and NVDA");
@@ -77,7 +87,7 @@ describe("NLPEntityService", () => {
         expect(result).toContain("Apple");
         expect(result).toContain("google");
         expect(result).toContain("NVDA");
-    })
+    });
 
     it("should find entites in longer text", async() => {
         const text = "Analysts at H.C. Wainwright underscore the potential for FemaSeed to generate additional revenue streams from 2025 onward as Femasys continues to increase the product’s presence and consumer awareness.";
@@ -85,6 +95,14 @@ describe("NLPEntityService", () => {
         expect(result).toContain("Wainwright");
         expect(result).toContain("FemaSeed");
         expect(result).toContain("Femasys");
-        
+    });
+
+    it("should only find Alibaba and NVDA in 'compare Alibaba Hong Kong stocks and NVDA'", async() => {
+        const result = await findEntities("compare Alibaba Hong Kong stocks and NVDA");
+        expect(result).toContain("Alibaba");
+        expect(result).toContain("NVDA");
+        expect(result).not.toContain("Hong");
+        expect(result).not.toContain("Kong");
+        expect(result).not.toContain("stocks");
     });
 })
