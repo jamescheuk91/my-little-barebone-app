@@ -30,9 +30,9 @@ export class StockFuzeMatchingService {
       console.debug('[StockFuzeMatchingService] initialize() - Creating global Fuse index for all stocks');
       const fuzeIndexOptions = {
         keys: ["name", "symbol"],         // Search in both name and symbol
-        threshold: 0.6,                   // Very high to catch severe typos like "Micorsft"
+        threshold: 0.4,                   // Lower threshold for stricter matching
         isCaseSensitive: false,           // Case insensitive matching
-        minMatchCharLength: 2,            // Lower to catch shorter matches
+        minMatchCharLength: 3,            // Increased to reduce false positives
         ignoreLocation: true,             // Better for handling typos
         distance: 200,                    // Large distance for better fuzzy matching
         useExtendedSearch: true,          // Enable extended search for more flexibility
@@ -109,7 +109,7 @@ export class StockFuzeMatchingService {
       console.debug(`[StockFuzeMatchingService] search() - Searching for '${query}' in location '${location}' with index size: ${stockCount}`);
       
       try {
-        const fuzzyStockList: FuseResult<Stock>[] = fuseIndex.search(query, { limit: 3 });
+        const fuzzyStockList: FuseResult<Stock>[] = fuseIndex.search(query);
         console.debug(`[StockFuzeMatchingService] search() - Found ${fuzzyStockList.length} matches for '${query}'`);
         
         // Log top matches for debugging
@@ -119,8 +119,15 @@ export class StockFuzeMatchingService {
           topResults.forEach((r, i) => {
             console.debug(`[StockFuzeMatchingService] search() - Match #${i+1}: Symbol: ${r.item.symbol}, Name: ${r.item.name}, Score: ${r.score}`);
           });
-          const topMatch = fuzzyStockList.sort((a, b) => (a.score as number) - (b.score as number))[0]; 
-          resolve(topMatch);
+          
+          // Filter matches by threshold and sort by score
+          const goodMatches = fuzzyStockList
+            .filter(match => (match.score || 1) < 0.4) // Keep only good matches
+            .sort((a, b) => (a.score || 1) - (b.score || 1)); // Sort by score
+            
+          console.debug(`[StockFuzeMatchingService] search() - Found ${goodMatches.length} good matches after filtering`);
+          
+          resolve(goodMatches[0]); // Return the best match
         } else {
           console.debug(`[StockFuzeMatchingService] search() - No matches found for '${query}'`);
           resolve(null);

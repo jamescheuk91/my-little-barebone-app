@@ -7,7 +7,8 @@ export enum Exchange {
   AMEX = 'AMEX',       // NYSE American (formerly American Stock Exchange)
   HKSE = 'HKSE',      // Hong Kong Stock Exchange
   SHH = 'SHH',        // Shanghai Stock Exchange
-  SHZ = 'SHZ'         // Shenzhen Stock Exchange
+  SHZ = 'SHZ',        // Shenzhen Stock Exchange
+  OTC = 'OTC'         // Over-the-Counter Market
 }
 
 /**
@@ -25,7 +26,7 @@ export enum MarketLocation {
  */
 export const MARKET_EXCHANGES: Record<MarketLocation, Exchange[]> = {
   [MarketLocation.GLOBAL]: Object.values(Exchange),
-  [MarketLocation.US]: [Exchange.NYSE, Exchange.NASDAQ, Exchange.AMEX],
+  [MarketLocation.US]: [Exchange.NYSE, Exchange.NASDAQ, Exchange.AMEX, Exchange.OTC],
   [MarketLocation.HK]: [Exchange.HKSE],
   [MarketLocation.CN]: [Exchange.SHH, Exchange.SHZ]
 };

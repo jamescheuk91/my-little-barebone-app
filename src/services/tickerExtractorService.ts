@@ -1,4 +1,4 @@
-import { findEntities } from './NLPEntityService';
+import { findEntities } from './NLPEntityServiceV2';
 import { getStockList } from './StockDataService';
 import { SupportedLanguage, Stock, SupportedLocation } from '@/types';
 import { Exchange, MarketLocation } from '@/types/market';

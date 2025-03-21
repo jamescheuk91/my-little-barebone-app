@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     GOOGLE_TRANSLATE_API_KEY: process.env.GOOGLE_TRANSLATE_API_KEY,
     GOOGLE_APPLICATION_CREDENTIALS_JSON: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
     FMP_API_KEY: process.env.FMP_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     CRON_SECRET_TOKEN: process.env.CRON_SECRET_TOKEN,
   },
   publicRuntimeConfig: {
