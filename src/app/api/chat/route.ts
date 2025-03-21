@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         : 'GLOBAL';
     console.debug("selectedLocation: ", selectedLocation);
     // Find stock tickers in the translated text
-    
+    console.debug(`Searching for tickers in: "${translationResult.translatedText}"`);
     const stocks: Stock[] = await extractTickers(translationResult.translatedText, selectedLocation, selectedLanguage);
     
     

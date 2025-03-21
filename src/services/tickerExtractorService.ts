@@ -115,10 +115,13 @@ export class TickerExtractorService {
   private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> {
     console.log('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
     
+    // Get the full translated query for market focus detection
+    const translatedQuery = entities.join(' ');
+    
     // Create an array of promises for parallel processing
     const fuzzyMatchPromises = entities.map(async entity => {
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
-      const matchResults = await searchStocks(entity, location, selectedLanguage);
+      const matchResults = await searchStocks(entity, location, selectedLanguage, translatedQuery);
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
       
       if (matchResults.length > 0) {

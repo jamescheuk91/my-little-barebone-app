@@ -100,6 +100,7 @@ export class StockFuzeMatchingService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   search(query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult | null> {
     console.log(`[StockFuzeMatchingService] search() - Starting with query: "${query}", location: "${location}"`);
     
@@ -148,12 +149,55 @@ export class StockFuzeMatchingService {
 
 export const stockFuzeMatchingService = new StockFuzeMatchingService();
 
-export const searchStocks = async (query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult[]> => {
+/**
+ * Determines if there are market-specific keywords in the translated query
+ * @param translatedQuery The translated query to check
+ * @returns The detected market location or null if none found
+ */
+const detectMarketFocus = (translatedQuery: string): SupportedLocation | null => {
+  const normalizedQuery = translatedQuery.toLowerCase();
+  
+  // Keywords that indicate Hong Kong market focus
+  const hkKeywords = ['hong kong', 'hk stock', 'hong kong stock', '港股', 'hkse', 'hkex'];
+  if (hkKeywords.some(keyword => normalizedQuery.includes(keyword))) {
+    console.log(`[detectMarketFocus] Hong Kong market focus detected in: "${translatedQuery}"`);
+    return 'HK';
+  }
+  
+  // Keywords that indicate China market focus
+  const cnKeywords = ['shanghai', 'shenzhen', 'a-share', 'a share', 'china stock', 'chinese stock', '中国股', '中国股票', 'a股'];
+  if (cnKeywords.some(keyword => normalizedQuery.includes(keyword))) {
+    console.log(`[detectMarketFocus] China market focus detected in: "${translatedQuery}"`);
+    return 'CN';
+  }
+  
+  // Keywords that indicate US market focus
+  const usKeywords = ['nasdaq', 'nyse', 'us stock', 'american stock', 'wall street', 'us share'];
+  if (usKeywords.some(keyword => normalizedQuery.includes(keyword))) {
+    console.log(`[detectMarketFocus] US market focus detected in: "${translatedQuery}"`);
+    return 'US';
+  }
+  
+  return null;
+};
+
+export const searchStocks = async (query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage, translatedQuery?: string): Promise<StockSearchResult[]> => {
   console.log(`[searchStocks] Wrapper function called with query: "${query}", location: "${location}", language: "${selectedLanguage}"`);
   
-  // For non-English languages with global location, select a specific market location
+  // Determine the optimal search location based on various factors
   let searchLocation = location;
-  if (location === 'GLOBAL' && selectedLanguage !== 'en') {
+  
+  // Step 1: Check for market-specific keywords in the translatedQuery
+  if (translatedQuery && location === 'GLOBAL') {
+    const detectedMarket = detectMarketFocus(translatedQuery);
+    if (detectedMarket) {
+      searchLocation = detectedMarket;
+      console.log(`[searchStocks] Market focus detected in query. Switching to ${searchLocation} location for search.`);
+    }
+  }
+  
+  // Step 2: For non-English languages with global location, select a specific market location
+  if (searchLocation === 'GLOBAL' && selectedLanguage !== 'en') {
     if (selectedLanguage === 'zh-CN') {
       searchLocation = 'CN';
       console.log(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
