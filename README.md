@@ -30,9 +30,11 @@ npm install
 ```
 
 ### Update the .env.local with the required values
+#### you will need Google Service Account, Google Cloud API Key, FMP API Key
 ```
 cp .env.example .env.local 
 ```
+
 ### Run the development server
 ```
 npm run dev
@@ -56,6 +58,5 @@ Read README.md, CLAUDE.md, ai_docs/\*, and run git ls-files to understand the pr
 
 
 ## Assumpations
-
-- The deployed server is able to access Google API
+- The deployed server is able to access Google API and FMP API
 - FMP Stock List Data dont change frequently and can be cached
