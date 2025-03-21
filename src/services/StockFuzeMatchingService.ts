@@ -43,6 +43,7 @@ export class StockFuzeMatchingService {
         const exchange = stock.exchangeShortName?.toUpperCase() || stock.exchange?.toUpperCase();
         return exchange && ["NYSE", "NASDAQ", "AMEX", "OTC"].includes(exchange);
       });
+
       console.log(`[StockFuzeMatchingService] initialize() - Creating US Fuse index with ${usStocks.length} stocks`);
       this.fuseIndices.set("US", new Fuse(usStocks, {
         keys: ["name", "symbol"],         // Search in both name and symbol
@@ -56,12 +57,13 @@ export class StockFuzeMatchingService {
       }));
       this.stockCounts.set("US", usStocks.length);
       
-      // CN stocks index (Shanghai, Shenzhen)
+      // CN stocks index (SHH , SHZ)
       console.log('[StockFuzeMatchingService] initialize() - Filtering CN stocks');
       const cnStocks = stockList.filter(stock => {
-        const exchange = stock.exchangeShortName?.toUpperCase() || stock.exchange?.toUpperCase();
-        return exchange && ["SHANGHAI", "SHENZHEN", "SHH", "SHZ"].includes(exchange);
+        const exchange = stock.exchangeShortName?.toUpperCase();
+        return exchange && ["SHH", "SHZ"].includes(exchange);
       });
+      
       console.log(`[StockFuzeMatchingService] initialize() - Creating CN Fuse index with ${cnStocks.length} stocks`);
       this.fuseIndices.set("CN", new Fuse(cnStocks, {
         keys: ["name", "symbol"],         // Search in both name and symbol
@@ -75,9 +77,10 @@ export class StockFuzeMatchingService {
       // HK stocks index (Hong Kong)
       console.log('[StockFuzeMatchingService] initialize() - Filtering HK stocks');
       const hkStocks = stockList.filter(stock => {
-        const exchange = stock.exchangeShortName?.toUpperCase() || stock.exchange?.toUpperCase();
-        return exchange && ["HONG KONG STOCK EXCHANGE", "HKSE", "HKG"].includes(exchange);
+        const exchange = stock.exchangeShortName?.toUpperCase();
+        return exchange === "HKSE ";
       });
+      
       console.log(`[StockFuzeMatchingService] initialize() - Creating HK Fuse index with ${hkStocks.length} stocks`);
       this.fuseIndices.set("HK", new Fuse(hkStocks, {
         keys: ["name", "symbol"],         // Search in both name and symbol
