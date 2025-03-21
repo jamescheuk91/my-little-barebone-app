@@ -63,7 +63,7 @@ export async function cacheStockData(data: Stock[]): Promise<void> {
   };
   
   fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheData, null, 2));
-  console.log(`Cache updated with ${data.length} stocks at ${new Date().toISOString()}`);
+  console.debug(`Cache updated with ${data.length} stocks at ${new Date().toISOString()}`);
 }
 
 /**

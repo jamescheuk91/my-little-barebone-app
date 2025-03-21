@@ -32,7 +32,7 @@ export class TickerExtractorService {
    * Loads stock data and builds the lookup map
    */
   constructor() {
-    console.log('[TickerExtractorService] Constructor called - Creating new instance');
+    console.debug('[TickerExtractorService] Constructor called - Creating new instance');
     this.stockInfoMap = new Map<string, Stock>();
     this.init();
   }
@@ -41,15 +41,15 @@ export class TickerExtractorService {
    * Initializes the service by loading stock data and building the lookup map
    */
   async init(): Promise<void> {
-    console.log('[TickerExtractorService] init() - Starting initialization');
+    console.debug('[TickerExtractorService] init() - Starting initialization');
     try {
       // Get stock list from the StockDataService
-      console.log('[TickerExtractorService] init() - Fetching stock list from StockDataService');
+      console.debug('[TickerExtractorService] init() - Fetching stock list from StockDataService');
       const stockList = await getStockList();
-      console.log(`[TickerExtractorService] init() - Received ${stockList.length} stocks from StockDataService`);
+      console.debug(`[TickerExtractorService] init() - Received ${stockList.length} stocks from StockDataService`);
       
       // Build symbol to stock info map
-      console.log('[TickerExtractorService] init() - Building symbol to stock info map');
+      console.debug('[TickerExtractorService] init() - Building symbol to stock info map');
       
       stockList.forEach(stock => {
         // Add by symbol
@@ -57,7 +57,7 @@ export class TickerExtractorService {
       });
       
       this.isInitialized = true;
-      console.log(`[TickerExtractorService] init() - Initialization complete with ${stockList.length} stocks`);
+      console.debug(`[TickerExtractorService] init() - Initialization complete with ${stockList.length} stocks`);
     } catch (error) {
       console.error('[TickerExtractorService] init() - Error initializing:', error);
       throw error;
@@ -90,22 +90,22 @@ export class TickerExtractorService {
    * @returns An array of stocks that match the entities
    */
   private findDirectMatches(entities: string[], location: SupportedLocation): Stock[] {
-    console.log('[TickerExtractorService] findDirectMatches() - Finding direct matches');
+    console.debug('[TickerExtractorService] findDirectMatches() - Finding direct matches');
     const directMatches: Stock[] = [];
     
     entities.forEach(entity => {
-      console.log(`[TickerExtractorService] findDirectMatches() - Checking entity: "${entity}"`);
+      console.debug(`[TickerExtractorService] findDirectMatches() - Checking entity: "${entity}"`);
       // Check for direct match by symbol
       const stockInfo = this.stockInfoMap.get(entity.toUpperCase());
       
       if (!stockInfo) {
-        console.log(`[TickerExtractorService] findDirectMatches() - No direct match found for "${entity}"`);
+        console.debug(`[TickerExtractorService] findDirectMatches() - No direct match found for "${entity}"`);
         return;
       }
       
       // Apply location filtering
       if (this.stockMatchesLocation(stockInfo, location)) {
-        console.log(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" in ${location}: ${JSON.stringify(stockInfo)}`);
+        console.debug(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" in ${location}: ${JSON.stringify(stockInfo)}`);
         
         // Add metadata using our interface
         const stockWithMatchInfo = stockInfo as StockWithMatchInfo;
@@ -114,7 +114,7 @@ export class TickerExtractorService {
         
         directMatches.push(stockWithMatchInfo);
       } else {
-        console.log(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" but filtered out due to location: ${location}`);
+        console.debug(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" but filtered out due to location: ${location}`);
       }
     });
     
@@ -128,26 +128,26 @@ export class TickerExtractorService {
    * @returns An array of stocks that fuzzy match the entities
    */
   private async findFuzzyMatches(entities: string[], location: SupportedLocation, selectedLanguage: SupportedLanguage, queryText: string): Promise<Stock[]> {
-    console.log('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
+    console.debug('[TickerExtractorService] findFuzzyMatches() - Starting fuzzy matching');
     
-    console.log(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${queryText}"`);
+    console.debug(`[TickerExtractorService] findFuzzyMatches() - Using full text for context: "${queryText}"`);
     
     // Filter out entities that have direct matches
     const entitiesToFuzzyMatch = entities.filter(entity => {
         const stockInfo = this.stockInfoMap.get(entity.toUpperCase());
         const hasDirectMatch = stockInfo && this.stockMatchesLocation(stockInfo, location);
-        console.log(`[TickerExtractorService] findFuzzyMatches() - Entity "${entity}" ${hasDirectMatch ? 'has direct match, skipping fuzzy' : 'needs fuzzy matching'}`);
+        console.debug(`[TickerExtractorService] findFuzzyMatches() - Entity "${entity}" ${hasDirectMatch ? 'has direct match, skipping fuzzy' : 'needs fuzzy matching'}`);
         return !hasDirectMatch;
     });
 
     const fuzzyMatchPromises = entitiesToFuzzyMatch.map(async entity => {
-      console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
+      console.debug(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
       // Pass the full original query to provide context for market detection
       const matchResults = await searchStocks(entity, location, selectedLanguage, queryText);
-      console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
+      console.debug(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
       
       if (matchResults.length > 0) {
-        console.log(`[TickerExtractorService] findFuzzyMatches() - Top match for "${entity}": ${JSON.stringify(matchResults[0])}`);
+        console.debug(`[TickerExtractorService] findFuzzyMatches() - Top match for "${entity}": ${JSON.stringify(matchResults[0])}`);
       }
       
       // Return stocks with fuzzy match information
@@ -194,7 +194,7 @@ export class TickerExtractorService {
    * @returns The prioritized stocks
    */
   private prioritizeExchanges(stocks: Stock[], location: SupportedLocation): Stock[] {
-    console.log(`[TickerExtractorService] prioritizeExchanges() - Prioritizing ${stocks.length} stocks for location: ${location}`);
+    console.debug(`[TickerExtractorService] prioritizeExchanges() - Prioritizing ${stocks.length} stocks for location: ${location}`);
     
     if (stocks.length <= 1) {
       return stocks; // No need to sort if there's 0 or 1 item
@@ -205,7 +205,7 @@ export class TickerExtractorService {
     
     if (location === MarketLocation.GLOBAL) {
       // For GLOBAL, prioritize direct symbol matches and stocks with higher matching scores
-      console.log('[TickerExtractorService] prioritizeExchanges() - Applying GLOBAL priority: direct symbol matches and higher scores');
+      console.debug('[TickerExtractorService] prioritizeExchanges() - Applying GLOBAL priority: direct symbol matches and higher scores');
       
       // Sort based on direct symbol matches first, then by match score
       prioritizedStocks.sort((a, b) => {
@@ -229,7 +229,7 @@ export class TickerExtractorService {
       });
     } else if (location === MarketLocation.US) {
       // In US, prioritize NYSE, then NASDAQ
-      console.log('[TickerExtractorService] prioritizeExchanges() - Applying US exchange priority: NYSE, NASDAQ');
+      console.debug('[TickerExtractorService] prioritizeExchanges() - Applying US exchange priority: NYSE, NASDAQ');
       prioritizedStocks.sort((a, b) => {
         const exchangeA = a.exchangeShortName?.toUpperCase() || '';
         const exchangeB = b.exchangeShortName?.toUpperCase() || '';
@@ -246,7 +246,7 @@ export class TickerExtractorService {
       });
     } else if (location === MarketLocation.CN) {
       // In CN, prioritize SHH, then SHZ
-      console.log('[TickerExtractorService] prioritizeExchanges() - Applying CN exchange priority: SHH, SHZ');
+      console.debug('[TickerExtractorService] prioritizeExchanges() - Applying CN exchange priority: SHH, SHZ');
       prioritizedStocks.sort((a, b) => {
         const exchangeA = a.exchangeShortName?.toUpperCase() || '';
         const exchangeB = b.exchangeShortName?.toUpperCase() || '';
@@ -263,14 +263,14 @@ export class TickerExtractorService {
       });
     } else if (location === MarketLocation.HK) {
       // For HK, we don't need special sorting as we only have HKSE
-      console.log('[TickerExtractorService] prioritizeExchanges() - No special sorting needed for HK');
+      console.debug('[TickerExtractorService] prioritizeExchanges() - No special sorting needed for HK');
     }
     
     // Log the prioritization results
     if (prioritizedStocks.length > 0) {
-      console.log('[TickerExtractorService] prioritizeExchanges() - Exchange prioritization results:');
+      console.debug('[TickerExtractorService] prioritizeExchanges() - Exchange prioritization results:');
       prioritizedStocks.slice(0, Math.min(3, prioritizedStocks.length)).forEach((stock, i) => {
-        console.log(`[TickerExtractorService] prioritizeExchanges() - #${i+1}: Symbol: ${stock.symbol}, Exchange: ${stock.exchangeShortName || stock.exchange}`);
+        console.debug(`[TickerExtractorService] prioritizeExchanges() - #${i+1}: Symbol: ${stock.symbol}, Exchange: ${stock.exchangeShortName || stock.exchange}`);
       });
     }
     
@@ -287,23 +287,23 @@ export class TickerExtractorService {
     console.debug(`[TickerExtractorService] extractTickers() - Starting with text: "${queryText}", selectedLocation: ${selectedLocation}`);
     
     if (!queryText || queryText.trim() === '') {  
-      console.log('[TickerExtractorService] extractTickers() - Empty queryText provided, returning empty array');
+      console.debug('[TickerExtractorService] extractTickers() - Empty queryText provided, returning empty array');
       return [];
     }
     
     try {
       // Ensure the service is initialized
       if (!this.isInitialized || this.stockInfoMap.size === 0) {
-        console.log('[TickerExtractorService] extractTickers() - StockInfoMap is empty, initializing');
+        console.debug('[TickerExtractorService] extractTickers() - StockInfoMap is empty, initializing');
         await this.init();
       } else {
-        console.log(`[TickerExtractorService] extractTickers() - StockInfoMap already contains ${this.stockInfoMap.size} entries`);
+        console.debug(`[TickerExtractorService] extractTickers() - StockInfoMap already contains ${this.stockInfoMap.size} entries`);
       }
       
       // Extract entities from queryText
-      console.log('[TickerExtractorService] extractTickers() - Calling findEntities to extract potential entities');
+      console.debug('[TickerExtractorService] extractTickers() - Calling findEntities to extract potential entities');
       const entities = await findEntities(queryText);
-      console.log(`[TickerExtractorService] extractTickers() - Found ${entities.length} entities: ${JSON.stringify(entities)}`);
+      console.debug(`[TickerExtractorService] extractTickers() - Found ${entities.length} entities: ${JSON.stringify(entities)}`);
       
       if (entities.length === 0) {
         return [];
@@ -311,19 +311,19 @@ export class TickerExtractorService {
       
       // Find direct matches
       const directMatches = this.findDirectMatches(entities, selectedLocation);
-      console.log(`[TickerExtractorService] extractTickers() - Direct matches: ${directMatches.length}`);
+      console.debug(`[TickerExtractorService] extractTickers() - Direct matches: ${directMatches.length}`);
       
       // Find fuzzy matches
       const fuzzyMatches = await this.findFuzzyMatches(entities, selectedLocation, selectedLanguage, queryText);
-      console.log(`[TickerExtractorService] extractTickers() - Total fuzzy matches: ${fuzzyMatches.length}`);
+      console.debug(`[TickerExtractorService] extractTickers() - Total fuzzy matches: ${fuzzyMatches.length}`);
       
       // Combine and deduplicate matches
       const allMatches = this.deduplicate([...directMatches, ...fuzzyMatches]);
-      console.log(`[TickerExtractorService] extractTickers() - Total unique matches: ${allMatches.length}`);
+      console.debug(`[TickerExtractorService] extractTickers() - Total unique matches: ${allMatches.length}`);
       
       // Sort matches by exchange priority based on the selected location
       const sortedMatches = this.prioritizeExchanges(allMatches, selectedLocation);
-      console.log(`[TickerExtractorService] extractTickers() - Returning sorted matches by exchange priority`);
+      console.debug(`[TickerExtractorService] extractTickers() - Returning sorted matches by exchange priority`);
       
       return sortedMatches;
     } catch (error) {
@@ -343,8 +343,8 @@ const tickerExtractorService = new TickerExtractorService();
  * @returns An array of extracted stocks
  */
 export const extractTickers = async (text: string, selectedlocation: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<Stock[]> => {
-  console.log(`[extractTickers] Wrapper function called with text: "${text}", selectedlocation: ${selectedlocation}, selectedLanguage: ${selectedLanguage}`);
+  console.debug(`[extractTickers] Wrapper function called with text: "${text}", selectedlocation: ${selectedlocation}, selectedLanguage: ${selectedLanguage}`);
   const result = await tickerExtractorService.extractTickers(text, selectedlocation, selectedLanguage);
-  console.log(`[extractTickers] Wrapper function returning ${result.length} results`);
+  console.debug(`[extractTickers] Wrapper function returning ${result.length} results`);
   return result;
 };
