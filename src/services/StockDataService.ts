@@ -17,8 +17,9 @@ const API_KEY = process.env.FMP_API_KEY || serverRuntimeConfig.FMP_API_KEY || ''
 const FMP_LIST_STOCK_API_ENDPOINT = 'https://financialmodelingprep.com/api/v3/stock/list';
 
 // Log warning if API key is not set
+console.debug('[StockDataService] Initializing with cache dir:', CACHE_DIR);
 if (!API_KEY) {
-  console.warn('FMP_API_KEY is not set in environment variables or server runtime config');
+  console.error('[StockDataService] FMP_API_KEY is not set in environment variables or server runtime config');
 }
 
 /**
@@ -26,6 +27,7 @@ if (!API_KEY) {
  */
 async function fetchStockList(): Promise<Stock[]> {
   try {
+    console.debug('[StockDataService] Fetching stock list from API...');
     const response = await fetch(
       `${FMP_LIST_STOCK_API_ENDPOINT}?apikey=${API_KEY}`
     );
@@ -35,9 +37,11 @@ async function fetchStockList(): Promise<Stock[]> {
     }
     
     const data = await response.json();
-    return data.filter((stock: Stock) => stock.type === 'stock');
+    const filteredData = data.filter((stock: Stock) => stock.type === 'stock');
+    console.debug(`[StockDataService] Fetched ${filteredData.length} stocks from API`);
+    return filteredData;
   } catch (error) {
-    console.error('Error fetching stock list:', error);
+    console.error('[StockDataService] Error fetching stock list:', error);
     throw new Error(`Failed to fetch stock list: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -46,8 +50,14 @@ async function fetchStockList(): Promise<Stock[]> {
  * Ensures the cache directory exists
  */
 function ensureCacheDirectory() {
-  if (!fs.existsSync(CACHE_DIR)) {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      console.debug(`[StockDataService] Creating cache directory: ${CACHE_DIR}`);
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+  } catch (error) {
+    console.error(`[StockDataService] Error creating cache directory: ${error}`);
+    throw error;
   }
 }
 
@@ -63,7 +73,7 @@ export async function cacheStockData(data: Stock[]): Promise<void> {
   };
   
   fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheData, null, 2));
-  console.debug(`Cache updated with ${data.length} stocks at ${new Date().toISOString()}`);
+  console.debug(`[StockDataService] Cache updated with ${data.length} stocks at ${new Date().toISOString()}`);
 }
 
 /**
@@ -71,6 +81,7 @@ export async function cacheStockData(data: Stock[]): Promise<void> {
  */
 function isCacheValid(): boolean {
   if (!fs.existsSync(CACHE_FILE)) {
+    console.debug('[StockDataService] Cache file does not exist');
     return false;
   }
   
@@ -79,9 +90,14 @@ function isCacheValid(): boolean {
     const cache = JSON.parse(cacheContent);
     const now = Date.now();
     
-    return cache.timestamp && (now - cache.timestamp) < CACHE_EXPIRY;
+    const isValid = cache.timestamp && (now - cache.timestamp) < CACHE_EXPIRY;
+    if (!isValid) {
+      console.debug('[StockDataService] Cache is expired');
+    }
+    return isValid;
+    
   } catch (error) {
-    console.error('Error reading cache:', error);
+    console.error('[StockDataService] Error reading cache:', error);
     return false;
   }
 }
@@ -91,11 +107,12 @@ function isCacheValid(): boolean {
  */
 function getStockDataFromCache(): Stock[] {
   try {
+    console.debug('[StockDataService] Reading stock data from cache');
     const cacheContent = fs.readFileSync(CACHE_FILE, 'utf-8');
     const cache = JSON.parse(cacheContent) as CachedStockData;
     return cache.data;
   } catch (error) {
-    console.error('Error reading from cache:', error);
+    console.error('[StockDataService] Error reading from cache:', error);
     return [];
   }
 }
@@ -104,12 +121,15 @@ function getStockDataFromCache(): Stock[] {
  * Gets stock list, either from cache if valid or from API
  */
 export async function getStockList(): Promise<Stock[]> {
+  console.debug('[StockDataService] Getting stock list');
   if (isCacheValid()) {
+    console.debug('[StockDataService] Using cached data');
     return getStockDataFromCache();
   }
   
   // Cache is invalid, fetch new data
-  const data = await fetchStockList();
+  console.debug('[StockDataService] Cache invalid or expired, fetching fresh data');
+  const data = await fetchStockList(); 
   await cacheStockData(data);
   return data;
 }
@@ -119,10 +139,11 @@ export async function getStockList(): Promise<Stock[]> {
  */
 export async function updateStockCache(): Promise<void> {
   try {
+    console.debug('[StockDataService] Force updating stock cache');
     const data = await fetchStockList();
     await cacheStockData(data);
   } catch (error) {
-    console.error('Failed to update stock cache:', error);
+    console.error('[StockDataService] Failed to update stock cache:', error);
     throw error;
   }
 }
