@@ -149,9 +149,22 @@ export class StockFuzeMatchingService {
 export const stockFuzeMatchingService = new StockFuzeMatchingService();
 
 export const searchStocks = async (query: string, location: SupportedLocation, selectedLanguage: SupportedLanguage): Promise<StockSearchResult[]> => {
-  console.log(`[searchStocks] Wrapper function called with query: "${query}", location: "${location}"`);
+  console.log(`[searchStocks] Wrapper function called with query: "${query}", location: "${location}", language: "${selectedLanguage}"`);
+  
+  // For non-English languages with global location, select a specific market location
+  let searchLocation = location;
+  if (location === 'GLOBAL' && selectedLanguage !== 'en') {
+    if (selectedLanguage === 'zh-CN') {
+      searchLocation = 'CN';
+      console.log(`[searchStocks] Non-English language with global location detected. Switching to CN location for search.`);
+    } else if (selectedLanguage === 'zh-TW') {
+      searchLocation = 'HK';
+      console.log(`[searchStocks] Non-English language with global location detected. Switching to HK location for search.`);
+    }
+  }
+  
   try {
-    const result = await stockFuzeMatchingService.search(query, location, selectedLanguage);
+    const result = await stockFuzeMatchingService.search(query, searchLocation, selectedLanguage);
     console.log(`[searchStocks] Wrapper function returning ${result ? 'one result' : 'no results'}`);
     return result ? [result] : [];
   } catch (error) {

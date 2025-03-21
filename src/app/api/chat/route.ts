@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
     }
     
     const { searchParams } = new URL(request.url);
-    const selectedLanguage = searchParams.get('language') as SupportedLanguage;
+    const languageParam = searchParams.get('language');
+    // Make sure language is one of the supported values, default to 'en'
+    const selectedLanguage = 
+      (languageParam === 'en' || languageParam === 'zh-CN' || languageParam === 'zh-TW') 
+        ? languageParam as SupportedLanguage 
+        : 'en';
     // Create chat request with fixed target language "en"
     const chatRequest: ChatRequest = {
       text: body.text,

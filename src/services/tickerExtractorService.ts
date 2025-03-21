@@ -118,7 +118,7 @@ export class TickerExtractorService {
     // Create an array of promises for parallel processing
     const fuzzyMatchPromises = entities.map(async entity => {
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matching entity: "${entity}"`);
-      const matchResults = await searchStocks(entity, location);
+      const matchResults = await searchStocks(entity, location, selectedLanguage);
       console.log(`[TickerExtractorService] findFuzzyMatches() - Fuzzy matches for "${entity}": ${matchResults.length}`);
       
       if (matchResults.length > 0) {

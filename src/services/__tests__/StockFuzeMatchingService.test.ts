@@ -187,7 +187,7 @@ describe("StockFuzeMatchingService", () => {
 
   it("should find AAPL with 'Apple' with US", async () => {
     const entity = "Apple";
-    const results = await searchStocks(entity, "US");
+    const results = await searchStocks(entity, "US", 'en');
 
     // The search should return Apple Inc.
     expect(results.length).toBeGreaterThan(0);
