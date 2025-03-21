@@ -12,10 +12,12 @@ export interface StockSearchResult {
 export class StockFuzeMatchingService {
   private fuseIndices: Map<SupportedLocation, Fuse<Stock>> = new Map();
   private stockCounts: Map<SupportedLocation, number> = new Map();
+  private initializationPromise: Promise<void> | null = null;
   private isInitialized = false;
 
   constructor() {
     console.debug('[StockFuzeMatchingService] Constructor called - Creating new instance');
+    console.debug('[StockFuzeMatchingService] Current initialization state:', this.isInitialized);
     this.initialize();
   }
 
@@ -23,7 +25,12 @@ export class StockFuzeMatchingService {
     console.debug('[StockFuzeMatchingService] initialize() - Starting initialization');
     try {
       console.debug('[StockFuzeMatchingService] initialize() - Fetching stock list from StockDataService');
-      const stockList = await getStockList();
+      // Store the initialization promise
+      this.initializationPromise = (async () => {
+        const stockList = await getStockList();
+        if (!stockList || stockList.length === 0) {
+          throw new Error('Stock list is empty or undefined');
+        }
       console.debug(`[StockFuzeMatchingService] initialize() - Received ${stockList.length} stocks from StockDataService`);
       
       // Global index (all stocks)
@@ -82,8 +89,12 @@ export class StockFuzeMatchingService {
       for (const [location, count] of this.stockCounts.entries()) {
         console.debug(`[StockFuzeMatchingService] initialize() - Index "${location}" contains ${count} stocks`);
       }
+      })();
+      await this.initializationPromise;
     } catch (error) {
       console.error('[StockFuzeMatchingService] initialize() - Failed to initialize:', error);
+      this.isInitialized = false;
+      throw error;
     }
   }
 
@@ -93,6 +104,14 @@ export class StockFuzeMatchingService {
     
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
+        if (this.initializationPromise) {
+          console.debug('[StockFuzeMatchingService] search() - Waiting for initialization to complete...');
+          this.initializationPromise
+            .then(() => this.search(query, location, selectedLanguage))
+            .then(resolve)
+            .catch(reject);
+          return;
+        }
         console.error('[StockFuzeMatchingService] search() - Error: Fuse indices are not initialized yet');
         reject("Fuse indices are not initialized yet");
         return;
