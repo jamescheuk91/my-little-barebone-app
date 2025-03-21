@@ -3,6 +3,14 @@ import { getStockList } from './StockDataService';
 import { SupportedLanguage, Stock, SupportedLocation } from '@/types';
 import { searchStocks } from './StockFuzeMatchingService';
 
+/**
+ * Interface extending Stock with matching-related properties
+ */
+interface StockWithMatchInfo extends Stock {
+  _directSymbolMatch?: boolean;
+  _matchScore?: number;
+}
+
 // Define mapping of exchanges by location for cleaner code
 const LOCATION_EXCHANGES: Record<SupportedLocation, string[]> = {
   'GLOBAL': [],
@@ -97,7 +105,13 @@ export class TickerExtractorService {
       // Apply location filtering
       if (this.stockMatchesLocation(stockInfo, location)) {
         console.log(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" in ${location}: ${JSON.stringify(stockInfo)}`);
-        directMatches.push(stockInfo);
+        
+        // Add metadata using our interface
+        const stockWithMatchInfo = stockInfo as StockWithMatchInfo;
+        stockWithMatchInfo._directSymbolMatch = true;
+        stockWithMatchInfo._matchScore = 0; // Perfect score for direct matches
+        
+        directMatches.push(stockWithMatchInfo);
       } else {
         console.log(`[TickerExtractorService] findDirectMatches() - Direct match found for "${entity}" but filtered out due to location: ${location}`);
       }
@@ -128,7 +142,14 @@ export class TickerExtractorService {
         console.log(`[TickerExtractorService] findFuzzyMatches() - Top match for "${entity}": ${JSON.stringify(matchResults[0])}`);
       }
       
-      return matchResults.map(result => result.item);
+      // Return stocks with fuzzy match information
+      return matchResults.map(result => {
+        // Add match metadata to the stock
+        const stockWithMatchInfo = result.item as StockWithMatchInfo;
+        stockWithMatchInfo._directSymbolMatch = false;
+        stockWithMatchInfo._matchScore = result.score;
+        return stockWithMatchInfo;
+      });
     });
     
     // Wait for all fuzzy match operations to complete
@@ -157,6 +178,7 @@ export class TickerExtractorService {
     return uniqueStocks;
   }
   
+
   /**
    * Prioritizes stocks by exchange based on location
    * @param stocks The stocks to prioritize
@@ -173,7 +195,31 @@ export class TickerExtractorService {
     // Make a copy to avoid mutating the original array
     let prioritizedStocks = [...stocks];
     
-    if (location === 'US') {
+    if (location === 'GLOBAL') {
+      // For GLOBAL, prioritize direct symbol matches and stocks with higher matching scores
+      console.log('[TickerExtractorService] prioritizeExchanges() - Applying GLOBAL priority: direct symbol matches and higher scores');
+      
+      // Sort based on direct symbol matches first, then by match score
+      prioritizedStocks.sort((a, b) => {
+        const stockA = a as StockWithMatchInfo;
+        const stockB = b as StockWithMatchInfo;
+        
+        // First prioritize direct symbol matches
+        const isDirectMatchA = !!stockA._directSymbolMatch;
+        const isDirectMatchB = !!stockB._directSymbolMatch;
+        
+        if (isDirectMatchA && !isDirectMatchB) return -1;
+        if (!isDirectMatchA && isDirectMatchB) return 1;
+        
+        // Then prioritize by match score if both are fuzzy matches
+        if (!isDirectMatchA && !isDirectMatchB) {
+          // Use type assertion to access the _matchScore property
+          return (stockA._matchScore || 1) - (stockB._matchScore || 1);
+        }
+        
+        return 0; // Keep original order for equal matches
+      });
+    } else if (location === 'US') {
       // In US, prioritize NYSE, then NASDAQ
       console.log('[TickerExtractorService] prioritizeExchanges() - Applying US exchange priority: NYSE, NASDAQ');
       prioritizedStocks.sort((a, b) => {
